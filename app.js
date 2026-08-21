@@ -4440,6 +4440,7 @@ function pageFwNewWorkers() {
       </div>
     </div>
     <div class="card-body">
+      <div id="fnNewBulkSection" style="margin-bottom:20px;"></div>
       <div class="table-wrap" id="companyFnTable"><div style="text-align:center;color:#aaa;padding:30px;">ກຳລັງໂຫຼດ...</div></div>
     </div>
   </div>
@@ -4479,6 +4480,7 @@ function pageFwNewWorkers() {
 async function loadFwNewWorkers() {
   const el = document.getElementById('companyFnTable');
   if (!el) return;
+  renderFnNewBulkSection();
   const { data, error } = await sb.from('foreign_workers').select('*').eq('company_id', currentUser.companyId).order('created_at', { ascending: false });
   if (error) { el.innerHTML = `<div class="alert alert-danger">❌ ${error.message}</div>`; return; }
   if (!data || data.length === 0) { el.innerHTML = '<div style="text-align:center;color:#aaa;padding:30px;">ຍັງບໍ່ມີຂໍ້ມູນ — ກົດ "+ ລົງທະບຽນໃໝ່" ເພື່ອເລີ່ມ</div>'; return; }
