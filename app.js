@@ -4837,7 +4837,8 @@ async function handleFnrBulkPhotos(fileList) {
       const path = `fn_photos/${companyId}/${w.id}_${Date.now()}.jpg`;
       const { error: upErr } = await sb.storage.from('foreign-worker-docs').upload(path, file, { upsert: true });
       if (upErr) { unmatched.push(`${file.name} (ອັບໂຫລດຜິດພາດ: ${upErr.message})`); continue; }
-      await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
+      const { error: updErr } = await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
+      if (updErr) { unmatched.push(`${file.name} (ບັນທຶກຖານຂໍ້ມູນຜິດພາດ: ${updErr.message})`); continue; }
       matched++;
     } catch (e) { unmatched.push(`${file.name} (${e.message})`); }
   }
@@ -5021,7 +5022,8 @@ async function handleFnNewBulkPhotos(fileList) {
       const path = `fn_photos/${companyId}/${w.id}_${Date.now()}.jpg`;
       const { error: upErr } = await sb.storage.from('foreign-worker-docs').upload(path, file, { upsert: true });
       if (upErr) { unmatched.push(`${file.name} (ອັບໂຫລດຜິດພາດ: ${upErr.message})`); continue; }
-      await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
+      const { error: updErr } = await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
+      if (updErr) { unmatched.push(`${file.name} (ບັນທຶກຖານຂໍ້ມູນຜິດພາດ: ${updErr.message})`); continue; }
       matched++;
     } catch (e) { unmatched.push(`${file.name} (${e.message})`); }
   }
