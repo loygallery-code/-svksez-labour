@@ -4820,16 +4820,18 @@ async function handleFnrBulkPhotos(fileList) {
   const files = Array.from(fileList);
   const companyId = currentUser.companyId;
   const { data: allWorkers } = await sb.from('foreign_workers').select('id,reg_id,passport_no').eq('company_id', companyId);
+  const norm = s => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   const byKey = {};
+  const byKeyLoose = {};
   (allWorkers || []).forEach(w => {
-    if (w.reg_id) byKey[String(w.reg_id).trim().toLowerCase()] = w;
-    if (w.passport_no) byKey[String(w.passport_no).trim().toLowerCase()] = w;
+    if (w.reg_id) { byKey[String(w.reg_id).trim().toLowerCase()] = w; byKeyLoose[norm(w.reg_id)] = w; }
+    if (w.passport_no) { byKey[String(w.passport_no).trim().toLowerCase()] = w; byKeyLoose[norm(w.passport_no)] = w; }
   });
 
   let matched = 0; const unmatched = [];
   for (const file of files) {
     const nameNoExt = file.name.replace(/\.[^.]+$/, '').trim().toLowerCase();
-    const w = byKey[nameNoExt];
+    const w = byKey[nameNoExt] || byKeyLoose[norm(nameNoExt)];
     if (!w) { unmatched.push(file.name); continue; }
     try {
       const path = `fn_photos/${companyId}/${w.id}_${Date.now()}.jpg`;
@@ -5002,16 +5004,18 @@ async function handleFnNewBulkPhotos(fileList) {
   const files = Array.from(fileList);
   const companyId = currentUser.companyId;
   const { data: allWorkers } = await sb.from('foreign_workers').select('id,reg_id,passport_no').eq('company_id', companyId);
-  const byKey = {};
+  const norm = s => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const byKey = {};      // exact (lowercased, trimmed) key
+  const byKeyLoose = {}; // normalized (letters/numbers only) key — tolerates spaces / dash style differences
   (allWorkers || []).forEach(w => {
-    if (w.reg_id) byKey[String(w.reg_id).trim().toLowerCase()] = w;
-    if (w.passport_no) byKey[String(w.passport_no).trim().toLowerCase()] = w;
+    if (w.reg_id) { byKey[String(w.reg_id).trim().toLowerCase()] = w; byKeyLoose[norm(w.reg_id)] = w; }
+    if (w.passport_no) { byKey[String(w.passport_no).trim().toLowerCase()] = w; byKeyLoose[norm(w.passport_no)] = w; }
   });
 
   let matched = 0; const unmatched = [];
   for (const file of files) {
     const nameNoExt = file.name.replace(/\.[^.]+$/, '').trim().toLowerCase();
-    const w = byKey[nameNoExt];
+    const w = byKey[nameNoExt] || byKeyLoose[norm(nameNoExt)];
     if (!w) { unmatched.push(file.name); continue; }
     try {
       const path = `fn_photos/${companyId}/${w.id}_${Date.now()}.jpg`;
