@@ -4965,7 +4965,11 @@ async function handleFnNewBulkExcel(file) {
     } else {
       alert(`✅ ລົງທະບຽນ ${inserts.length} ຄົນ ສຳເລັດ — ຂໍ້ມູນຖືກ Sync ໄປໃນ "ສະຫຼຸບ" ທັນທີ`);
     }
-    await loadFnNew();
+    if (document.getElementById('companyFnTable')) {
+      await loadFwNewWorkers();
+    } else {
+      await loadFnNew();
+    }
   } catch (e) { alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message); }
 }
 
@@ -5004,7 +5008,11 @@ async function handleFnNewBulkPhotos(fileList) {
     msg += `\n\n⚠️ ຈັບຄູ່ບໍ່ໄດ້ ${unmatched.length} ໄຟລ໌ (ຊື່ໄຟລ໌ບໍ່ກົງກັບ ID ທະບຽນ/Passport ຂອງໃຜ):\n` + unmatched.slice(0,10).join('\n');
   }
   alert(msg);
-  await loadFnNew();
+  if (document.getElementById('companyFnTable')) {
+    await loadFwNewWorkers();
+  } else {
+    await loadFnNew();
+  }
 }
 
 function downloadFnBulkTemplate() {
