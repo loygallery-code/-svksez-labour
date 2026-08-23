@@ -3415,14 +3415,21 @@ async function generateRegId(prefix, table, companyId, companyCode) {
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
   const yy = String(year).slice(-2);
   const code = String(companyCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  // ນັບສະເພາະ ID ຂອງບໍລິສັດນີ້ເອງ (ຄົບຖ້ວນສະເໝີ) — ບໍ່ອີງໃສ່ຈຳນວນຮວມທຸກບໍລິສັດ
-  // ຍ້ອນລະຫັດບໍລິສັດຝັງໃນ ID ແລ້ວ ຮັບປະກັນບໍ່ຊ້ຳກັບບໍລິສັດອື່ນ
-  const { data: existing } = await sb.from(table).select('reg_id').eq('reg_year', year).eq('company_id', companyId);
+  const idPrefix = `${prefix}${code}`;
+  // ຄົ້ນຫາ ID ທັງໝົດຂອງບໍລິສັດນີ້ທີ່ຂຶ້ນຕົ້ນດ້ວຍ prefix+ລະຫັດບໍລິສັດ ແລ້ວເອົາເລກສູງສຸດ+1
+  // (ໜັກແໜ້ນກວ່າການອີງໃສ່ reg_year — ບໍ່ຕົກຫຼົ່ນເຖິງແມ່ນ reg_year ຈະຄາດເຄື່ອນ)
+  const { data: existing } = await sb.from(table).select('reg_id').eq('company_id', companyId).like('reg_id', `${idPrefix}%`);
   const usedIds = new Set((existing || []).map(r => r.reg_id));
-  let seq = (existing || []).length + 1;
+  let maxSeq = 0;
+  (existing || []).forEach(r => {
+    const tail = String(r.reg_id || '').slice(idPrefix.length);
+    const n = parseInt(tail.slice(-3), 10);
+    if (!isNaN(n) && n > maxSeq) maxSeq = n;
+  });
+  let seq = maxSeq + 1;
   let regId;
   do {
-    regId = `${prefix}${code}${month}${yy}${String(seq).padStart(3, '0')}`;
+    regId = `${idPrefix}${month}${yy}${String(seq).padStart(3, '0')}`;
     seq++;
   } while (usedIds.has(regId));
   return { regId, regYear: year };
@@ -4779,12 +4786,18 @@ async function handleFnrBulkExcel(file) {
     const regMonth = String(new Date().getMonth() + 1).padStart(2, '0');
     const regYY = String(regYear).slice(-2);
     const companyCode = await getCompanyCode(companyId);
-    const { data: existingRegs } = await sb.from('foreign_worker_renewals').select('reg_id').eq('reg_year', regYear).eq('company_id', companyId);
+    const idPrefix1 = `FNR${companyCode}`;
+    const { data: existingRegs } = await sb.from('foreign_worker_renewals').select('reg_id').eq('company_id', companyId).like('reg_id', `${idPrefix1}%`);
     const usedIds = new Set((existingRegs || []).map(r => r.reg_id));
-    let seq = (existingRegs || []).length + 1;
+    let maxSeq1 = 0;
+    (existingRegs || []).forEach(r => {
+      const n = parseInt(String(r.reg_id || '').slice(-3), 10);
+      if (!isNaN(n) && n > maxSeq1) maxSeq1 = n;
+    });
+    let seq = maxSeq1 + 1;
     function nextRegId() {
       let regId;
-      do { regId = `FNR${companyCode}${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
+      do { regId = `${idPrefix1}${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
       usedIds.add(regId);
       return regId;
     }
@@ -4972,12 +4985,18 @@ async function handleFnNewBulkExcel(file) {
     const regYY = String(regYear).slice(-2);
     const companyId = currentUser.companyId;
     const companyCode = await getCompanyCode(companyId);
-    const { data: existingRegs } = await sb.from('foreign_workers').select('reg_id').eq('reg_year', regYear).eq('company_id', companyId);
+    const idPrefix2 = `FN${companyCode}`;
+    const { data: existingRegs } = await sb.from('foreign_workers').select('reg_id').eq('company_id', companyId).like('reg_id', `${idPrefix2}%`);
     const usedIds = new Set((existingRegs || []).map(r => r.reg_id));
-    let seq = (existingRegs || []).length + 1;
+    let maxSeq2 = 0;
+    (existingRegs || []).forEach(r => {
+      const n = parseInt(String(r.reg_id || '').slice(-3), 10);
+      if (!isNaN(n) && n > maxSeq2) maxSeq2 = n;
+    });
+    let seq = maxSeq2 + 1;
     function nextRegId() {
       let regId;
-      do { regId = `FN${companyCode}${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
+      do { regId = `${idPrefix2}${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
       usedIds.add(regId);
       return regId;
     }
