@@ -4054,9 +4054,24 @@ async function saveFnWorker() {
   }
   payload.doc_files = docFiles;
 
-  let error;
+  let error, insertedRegId = regId;
   if (id) { ({ error } = await sb.from('foreign_workers').update(payload).eq('id', id)); if (!error) await logAudit('update', 'foreign_workers', id, { regId }); }
-  else { ({ error } = await sb.from('foreign_workers').insert(payload)); if (!error) await logAudit('create', 'foreign_workers', regId, {}); }
+  else {
+    // ລອງບັນທຶກ, ຖ້າເລກ ID ຊ້ຳກັນ (race condition) ໃຫ້ຄິດເລກໃໝ່ ແລະ ລອງອີກ
+    let attempt = 0;
+    while (attempt < 5) {
+      ({ error } = await sb.from('foreign_workers').insert(payload));
+      if (!error) break;
+      const isDupRegId = String(error.message||'').includes('foreign_workers_reg_id_key') || String(error.code) === '23505';
+      if (!isDupRegId) break;
+      attempt++;
+      const gen2 = await generateRegId('FN', 'foreign_workers');
+      payload.reg_id = gen2.regId; payload.reg_year = gen2.regYear;
+      insertedRegId = gen2.regId;
+    }
+    if (!error) await logAudit('create', 'foreign_workers', insertedRegId, {});
+  }
+  regId = insertedRegId;
   if (error) { alert('ຜິດພາດ: ' + error.message); return; }
 
   const { error: syncErr } = await syncForeignWorkersToRecords(companyId) || {};
@@ -4067,11 +4082,11 @@ async function saveFnWorker() {
     alert(`✅ ບັນທຶກສຳເລັດ — ID ທະບຽນ: ${regId}\nຂໍ້ມູນ ຕປທ ໄດ້ Sync ໄປໃນ "ອັບເດດສະຖິຕິ" ທັນທີ`);
   }
   closeModal('fnNewModal');
-  if (currentUser.role === 'company') {
-    loadFwCompany();
-    const latestEl = document.getElementById('latestRecord');
-    if (latestEl) loadMyRecord();
-  } else { loadFnNew(); }
+  if (document.getElementById('companyFnTable')) {
+    await loadFwNewWorkers();
+  } else {
+    loadFnNew();
+  }
   } catch(e) { alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message); }
   finally { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 ບັນທຶກຂໍ້ມູນ'; } }
 }
@@ -4307,7 +4322,16 @@ async function saveFnRenewal() {
   renewalPayload.doc_files = docFiles;
 
   const { error: insErr } = await sb.from('foreign_worker_renewals').insert(renewalPayload);
-  if (insErr) { alert('ຜິດພາດບັນທຶກ FNR: ' + insErr.message); return; }
+  if (insErr) {
+    const isDupRegId = String(insErr.message||'').includes('reg_id') || String(insErr.code) === '23505';
+    if (isDupRegId) {
+      const gen2 = await generateRegId('FNR', 'foreign_worker_renewals');
+      renewalPayload.reg_id = gen2.regId; renewalPayload.reg_year = gen2.regYear;
+      const { error: insErr2 } = await sb.from('foreign_worker_renewals').insert(renewalPayload);
+      if (insErr2) { alert('ຜິດພາດບັນທຶກ FNR: ' + insErr2.message); return; }
+      gen.regId = gen2.regId;
+    } else { alert('ຜິດພາດບັນທຶກ FNR: ' + insErr.message); return; }
+  }
 
   // ບັນທຶກ Audit Log — ໃຫ້ Admin ເຫັນ badge ແຈ້ງເຕືອນ (ຈຸດທີ່ເຄີຍຂາດຫາຍໄປ)
   await logAudit('create', 'foreign_worker_renewals', gen.regId, {
