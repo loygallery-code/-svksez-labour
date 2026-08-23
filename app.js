@@ -3402,18 +3402,27 @@ function docExpiryStatus(dateStr, warnDays = 15) {
   return { text: 'ຍັງໃຊ້ໄດ້', class: 'status-ok' };
 }
 
-async function generateRegId(prefix, table) {
+async function getCompanyCode(companyId) {
+  const { data } = await sb.from('companies').select('username').eq('id', companyId).single();
+  const u = data?.username || '';
+  const at = u.indexOf('@');
+  const code = (at >= 0 ? u.slice(at + 1) : u).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return code;
+}
+
+async function generateRegId(prefix, table, companyId, companyCode) {
   const year = new Date().getFullYear();
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
   const yy = String(year).slice(-2);
-  // ດຶງ reg_id ທີ່ມີຢູ່ແລ້ວໃນປີນີ້ທັງໝົດ
-  const { data: existing } = await sb.from(table).select('reg_id').eq('reg_year', year);
+  const code = String(companyCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // ນັບສະເພາະ ID ຂອງບໍລິສັດນີ້ເອງ (ຄົບຖ້ວນສະເໝີ) — ບໍ່ອີງໃສ່ຈຳນວນຮວມທຸກບໍລິສັດ
+  // ຍ້ອນລະຫັດບໍລິສັດຝັງໃນ ID ແລ້ວ ຮັບປະກັນບໍ່ຊ້ຳກັບບໍລິສັດອື່ນ
+  const { data: existing } = await sb.from(table).select('reg_id').eq('reg_year', year).eq('company_id', companyId);
   const usedIds = new Set((existing || []).map(r => r.reg_id));
-  // ຫາ sequence ທີ່ຍັງບໍ່ຖືກໃຊ້
   let seq = (existing || []).length + 1;
   let regId;
   do {
-    regId = `${prefix}-${month}${yy}${String(seq).padStart(3, '0')}`;
+    regId = `${prefix}${code}${month}${yy}${String(seq).padStart(3, '0')}`;
     seq++;
   } while (usedIds.has(regId));
   return { regId, regYear: year };
@@ -3993,18 +4002,20 @@ async function saveFnWorker() {
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ ກຳລັງບັນທຶກ...'; }
   try {
 
+  // Use currentUser.companyId for company role (the hidden select may have wrong value from activeCompanies[0])
+  const companyId = (currentUser.role === 'company') ? currentUser.companyId : document.getElementById('fnCompany').value;
+  if (!companyId) { alert('ຜິດພາດ: ບໍ່ພົບ company ID — ກະລຸນາລອງ login ໃໝ່'); return; }
+
   let regId, regYear;
   if (id) {
     const { data: existing } = await sb.from('foreign_workers').select('reg_id,reg_year').eq('id', id).single();
     regId = existing.reg_id; regYear = existing.reg_year;
   } else {
-    const gen = await generateRegId('FN', 'foreign_workers');
+    const companyCode = await getCompanyCode(companyId);
+    const gen = await generateRegId('FN', 'foreign_workers', companyId, companyCode);
     regId = gen.regId; regYear = gen.regYear;
   }
 
-  // Use currentUser.companyId for company role (the hidden select may have wrong value from activeCompanies[0])
-  const companyId = (currentUser.role === 'company') ? currentUser.companyId : document.getElementById('fnCompany').value;
-  if (!companyId) { alert('ຜິດພາດ: ບໍ່ພົບ company ID — ກະລຸນາລອງ login ໃໝ່'); return; }
   const payload = {
     company_id: companyId, reg_id: regId, reg_year: regYear,
     prefix: document.getElementById('fnPrefix').value,
@@ -4065,7 +4076,8 @@ async function saveFnWorker() {
       const isDupRegId = String(error.message||'').includes('foreign_workers_reg_id_key') || String(error.code) === '23505';
       if (!isDupRegId) break;
       attempt++;
-      const gen2 = await generateRegId('FN', 'foreign_workers');
+      const companyCode = await getCompanyCode(companyId);
+      const gen2 = await generateRegId('FN', 'foreign_workers', companyId, companyCode);
       payload.reg_id = gen2.regId; payload.reg_year = gen2.regYear;
       insertedRegId = gen2.regId;
     }
@@ -4273,7 +4285,8 @@ async function saveFnRenewal() {
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ ກຳລັງບັນທຶກ...'; }
   try {
 
-  const gen = await generateRegId('FNR', 'foreign_worker_renewals');
+  const companyCode = await getCompanyCode(companyId);
+  const gen = await generateRegId('FNR', 'foreign_worker_renewals', companyId, companyCode);
 
   // ນັບຄັ້ງທີຕໍ່ອາຍຸ — ຄັ້ງທີ 1 ຄືການຕໍ່ອາຍຸຄັ້ງທຳອິດຂອງຄົນນີ້ (ນັບຈາກ worker_id)
   const { count: priorRenewals } = await sb.from('foreign_worker_renewals').select('id', { count: 'exact', head: true }).eq('worker_id', workerId);
@@ -4325,7 +4338,7 @@ async function saveFnRenewal() {
   if (insErr) {
     const isDupRegId = String(insErr.message||'').includes('reg_id') || String(insErr.code) === '23505';
     if (isDupRegId) {
-      const gen2 = await generateRegId('FNR', 'foreign_worker_renewals');
+      const gen2 = await generateRegId('FNR', 'foreign_worker_renewals', companyId, companyCode);
       renewalPayload.reg_id = gen2.regId; renewalPayload.reg_year = gen2.regYear;
       const { error: insErr2 } = await sb.from('foreign_worker_renewals').insert(renewalPayload);
       if (insErr2) { alert('ຜິດພາດບັນທຶກ FNR: ' + insErr2.message); return; }
@@ -4765,12 +4778,13 @@ async function handleFnrBulkExcel(file) {
     const regYear = new Date().getFullYear();
     const regMonth = String(new Date().getMonth() + 1).padStart(2, '0');
     const regYY = String(regYear).slice(-2);
-    const { data: existingRegs } = await sb.from('foreign_worker_renewals').select('reg_id').eq('reg_year', regYear);
+    const companyCode = await getCompanyCode(companyId);
+    const { data: existingRegs } = await sb.from('foreign_worker_renewals').select('reg_id').eq('reg_year', regYear).eq('company_id', companyId);
     const usedIds = new Set((existingRegs || []).map(r => r.reg_id));
-    let seq = usedIds.size + 1;
+    let seq = (existingRegs || []).length + 1;
     function nextRegId() {
       let regId;
-      do { regId = `FNR-${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
+      do { regId = `FNR${companyCode}${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
       usedIds.add(regId);
       return regId;
     }
@@ -4956,18 +4970,20 @@ async function handleFnNewBulkExcel(file) {
     const regYear = new Date().getFullYear();
     const regMonth = String(new Date().getMonth() + 1).padStart(2, '0');
     const regYY = String(regYear).slice(-2);
-    const { data: existingRegs } = await sb.from('foreign_workers').select('reg_id').eq('reg_year', regYear);
+    const companyId = currentUser.companyId;
+    const companyCode = await getCompanyCode(companyId);
+    const { data: existingRegs } = await sb.from('foreign_workers').select('reg_id').eq('reg_year', regYear).eq('company_id', companyId);
     const usedIds = new Set((existingRegs || []).map(r => r.reg_id));
-    let seq = usedIds.size + 1;
+    let seq = (existingRegs || []).length + 1;
     function nextRegId() {
       let regId;
-      do { regId = `FN-${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
+      do { regId = `FN${companyCode}${regMonth}${regYY}${String(seq).padStart(3,'0')}`; seq++; } while (usedIds.has(regId));
       usedIds.add(regId);
       return regId;
     }
 
     const inserts = dataRows.map(r => ({
-      company_id: currentUser.companyId,
+      company_id: companyId,
       reg_id: nextRegId(),
       reg_year: regYear,
       prefix: r[0]||'', firstname: r[1]||'', lastname: r[2]||'',
@@ -6079,9 +6095,11 @@ async function lwGenRegId() {
   const now = new Date();
   const yy  = String(now.getFullYear()).slice(-2);
   const mm  = String(now.getMonth()+1).padStart(2,'0');
-  const { data: allReqs } = await sb.from('lao_workers').select('id');
+  const companyId = currentUser.companyId;
+  const companyCode = await getCompanyCode(companyId);
+  const { data: allReqs } = await sb.from('lao_workers').select('id').eq('company_id', companyId);
   const seq = (allReqs?.length||0) + 1;
-  const regId = `LA-${prov.code}${mm}${yy}${seq}`;
+  const regId = `LA${companyCode}${prov.code}${mm}${yy}${seq}`;
   document.getElementById('lwRegIdDisplay').value = regId;
   document.getElementById('lwRegId').value        = regId;
 }
@@ -6241,6 +6259,7 @@ async function handleLaoWorkerExcel(file) {
     const mm = String(now.getMonth()+1).padStart(2,'0');
     const { data: existing } = await supabaseRetry(() => sb.from('lao_workers').select('id').eq('company_id', currentUser.companyId));
     let seqStart = (existing?.length||0)+1;
+    const companyCode = await getCompanyCode(currentUser.companyId);
     const inserts = [];
     const unknownProvinces = [];
     for (let i=1;i<rows.length;i++) {
@@ -6253,7 +6272,7 @@ async function handleLaoWorkerExcel(file) {
         prov = LAO_PROVINCES.find(p => norm(p.name) === norm(pName));
       }
       if (!prov && pName) unknownProvinces.push(`ແຖວ ${i+1}: "${pName}"`);
-      const regId = `LA-${prov?.code || '00'}${mm}${yy}${seqStart++}`;
+      const regId = `LA${companyCode}${prov?.code || '00'}${mm}${yy}${seqStart++}`;
       inserts.push({
         company_id: currentUser.companyId, reg_id: regId,
         prefix: r[0]||'', firstname: r[1]||'', lastname: r[2]||'',
