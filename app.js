@@ -873,11 +873,16 @@ async function loadDashboard() {
   const hbd = document.getElementById('heroBannerDate');
   if(hbd) hbd.textContent = monthNames[month] + ' ' + year;
 
-  // ດຶງ live data ຈາກ lao_workers + foreign_workers ໂດຍກົງ
-  const [{ data: laoData }, { data: fwData }] = await Promise.all([
-    sb.from('lao_workers').select('id,gender,company_id,companies(zone)'),
-    sb.from('foreign_workers').select('id,gender,nationality,company_id,companies(zone)')
+  // ດຶງ live data ຈາກ lao_workers + foreign_workers ໂດຍກົງ (ບໍ່ໃຊ້ embedded join — ໃຊ້ zone ຈາກ activeCompanies ແທນ)
+  const [{ data: laoData, error: laoErr }, { data: fwData, error: fwErr }] = await Promise.all([
+    sb.from('lao_workers').select('id,gender,company_id'),
+    sb.from('foreign_workers').select('id,gender,nationality,company_id')
   ]);
+  if (laoErr) console.error('Dashboard lao_workers load error:', laoErr.message);
+  if (fwErr) console.error('Dashboard foreign_workers load error:', fwErr.message);
+
+  const zoneByCompany = {};
+  activeCompanies.forEach(c => { zoneByCompany[c.id] = c.zone; });
 
   const activeIds = new Set(activeCompanies.map(c => c.id));
   const laoRows = (laoData||[]).filter(r => activeIds.has(r.company_id));
@@ -889,16 +894,17 @@ async function loadDashboard() {
   activeCompanies.forEach(c => { if(zones[c.zone]) zones[c.zone].companies++; });
 
   const natMap = {};
+  const isFemale = g => { const s = String(g||'').trim().toUpperCase(); return s === 'ຍິງ' || s === 'FEMALE' || s === 'F'; };
   laoRows.forEach(r => {
-    const z = r.companies?.zone;
-    if(r.gender === 'ຍິງ') totalLaoF++; else totalLaoM++;
-    if(z && zones[z]) { if(r.gender==='ຍິງ') zones[z].laoF++; else zones[z].laoM++; }
+    const z = zoneByCompany[r.company_id];
+    if(isFemale(r.gender)) totalLaoF++; else totalLaoM++;
+    if(z && zones[z]) { if(isFemale(r.gender)) zones[z].laoF++; else zones[z].laoM++; }
   });
   fwRows.forEach(r => {
-    const z = r.companies?.zone;
+    const z = zoneByCompany[r.company_id];
     const nat = r.nationality || 'ບໍ່ລະບຸ';
-    if(r.gender === 'ຍິງ') totalForeignF++; else totalForeignM++;
-    if(z && zones[z]) { if(r.gender==='ຍິງ') zones[z].foreignF++; else zones[z].foreignM++; }
+    if(isFemale(r.gender)) totalForeignF++; else totalForeignM++;
+    if(z && zones[z]) { if(isFemale(r.gender)) zones[z].foreignF++; else zones[z].foreignM++; }
     if(!natMap[nat]) natMap[nat] = 0;
     natMap[nat]++;
   });
@@ -1674,7 +1680,7 @@ async function loadMyHistory() {
   // FN
   const fnBody = document.getElementById('histFnBody');
   if (fnBody) {
-    const fnRows = (fnData || []).filter(w => !String(w.reg_id||'').startsWith('FNR-'));
+    const fnRows = (fnData || []).filter(w => !String(w.reg_id||'').startsWith('FNR'));
     fnBody.innerHTML = fnRows.length === 0
       ? '<tr><td colspan="6" style="text-align:center;color:#aaa;">ຍັງບໍ່ມີຂໍ້ມູນ</td></tr>'
       : fnRows.map(w => `<tr>
@@ -3311,7 +3317,7 @@ async function loadFnSummary(idPrefix, viewMode) {
   const [{ data: fnDataRaw }, { data: fnrDataRaw }] = await Promise.all([fnQuery, fnrQuery]);
   const [fnData, fnrData] = await Promise.all([attachCompanyInfo(fnDataRaw), attachCompanyInfo(fnrDataRaw)]);
   // Exclude workers converted to FNR from FN list
-  const fn = (fnData || []).filter(w => !String(w.reg_id||'').startsWith('FNR-'));
+  const fn = (fnData || []).filter(w => !String(w.reg_id||'').startsWith('FNR'));
   const fnr = fnrData || [];
 
   const buildNatTable = (rows) => {
@@ -4530,8 +4536,8 @@ async function loadFwNewWorkers() {
   if (!data || data.length === 0) { el.innerHTML = '<div style="text-align:center;color:#aaa;padding:30px;">ຍັງບໍ່ມີຂໍ້ມູນ — ກົດ "+ ລົງທະບຽນໃໝ່" ເພື່ອເລີ່ມ</div>'; return; }
 
   // Use reg_id prefix only (no status column dependency)
-  const fnWorkers  = data.filter(w => !String(w.reg_id||'').startsWith('FNR-'));
-  const fnrWorkers = data.filter(w =>  String(w.reg_id||'').startsWith('FNR-'));
+  const fnWorkers  = data.filter(w => !String(w.reg_id||'').startsWith('FNR'));
+  const fnrWorkers = data.filter(w =>  String(w.reg_id||'').startsWith('FNR'));
 
   const fnrBanner = fnrWorkers.length > 0 ? `<div class="alert" style="background:#eaf4ff;border-left:4px solid #2980b9;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;">
     🔄 ມີ <b>${fnrWorkers.length} ຄົນ</b> ຖືກ re-register ເປັນ <b>FNR</b> ແລ້ວ — ສາມາດຄົ້ນຫາໄດ້ໃນໜ້າ "ແຮງງານຕ່າງປະເທດຂໍຕໍ່ເອກະສານ"
@@ -5277,7 +5283,7 @@ async function openFwLetterPanel(typeHint) {
       .eq('company_id', currentUser.companyId)
       .order('created_at', { ascending: false });
     loadError = error;
-    if (fwData) workers = fwData.filter(w => String(w.reg_id||'').startsWith('FNR-'));
+    if (fwData) workers = fwData.filter(w => String(w.reg_id||'').startsWith('FNR'));
   } else {
     // FN new: load from foreign_workers, exclude already-renewed (reg_id starts FNR-)
     const { data: fwData, error } = await sb.from('foreign_workers')
@@ -5285,7 +5291,7 @@ async function openFwLetterPanel(typeHint) {
       .eq('company_id', currentUser.companyId)
       .order('created_at', { ascending: false });
     loadError = error;
-    if (fwData) workers = fwData.filter(w => !String(w.reg_id||'').startsWith('FNR-'));
+    if (fwData) workers = fwData.filter(w => !String(w.reg_id||'').startsWith('FNR'));
   }
 
   if (loadError) {
@@ -5641,7 +5647,7 @@ async function loadMyFwSummary() {
 
   const [{ data: fn }, { data: fnr }] = await Promise.all([fnQ, fnrQ]);
   // Exclude workers that have been converted to FNR (reg_id starts with FNR-)
-  const fnRows = (fn || []).filter(w => !String(w.reg_id||'').startsWith('FNR-'));
+  const fnRows = (fn || []).filter(w => !String(w.reg_id||'').startsWith('FNR'));
   const fnrRows = fnr || [];
 
   // Brief summary by nationality/gender
@@ -7529,7 +7535,7 @@ async function searchWorkerMovement() {
       reg_id: w.reg_id,
       er_id: null, reason: null, category: null,
       position: w.position || '-',
-      worker_type: String(w.reg_id||'').startsWith('FNR-') ? 'fnr' : 'fn'
+      worker_type: String(w.reg_id||'').startsWith('FNR') ? 'fnr' : 'fn'
     });
   });
 
@@ -7800,7 +7806,7 @@ async function loadResignWorkerList() {
   } else {
     const {data} = await sb.from('foreign_workers').select('id,reg_id,prefix,firstname,lastname,nationality,gender,position,labour_card_issue').eq('company_id',coId).order('firstname');
     const all=data||[];
-    const filtered=type==='fnr' ? all.filter(w=>String(w.reg_id||'').startsWith('FNR-')) : all.filter(w=>!String(w.reg_id||'').startsWith('FNR-'));
+    const filtered=type==='fnr' ? all.filter(w=>String(w.reg_id||'').startsWith('FNR')) : all.filter(w=>!String(w.reg_id||'').startsWith('FNR'));
     _rsWorkerCache=filtered.map(w=>({...w,_type:type,_label:`${esc(w.reg_id)} — ${esc(w.firstname)} ${esc(w.lastname)}`}));
   }
 }
@@ -8147,7 +8153,7 @@ async function generateNewStyleReport(type, now, fy, fm, ty, tm) {
         .order('created_at', { ascending: true });
       if (error) console.error('FN query error:', error.message);
       const data = await attachCompanyInfo(rawData);
-      workers = (data || []).filter(w => !String(w.reg_id||'').startsWith('FNR-'))
+      workers = (data || []).filter(w => !String(w.reg_id||'').startsWith('FNR'))
         .map(w => ({ ...w, co: w.companies?.name_lao||'-', zone: w.companies?.zone||'-' }));
     }
 
