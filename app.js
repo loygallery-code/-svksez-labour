@@ -4857,6 +4857,7 @@ async function handleFnrBulkPhotos(fileList) {
 
   let matched = 0; const unmatched = [];
   for (const file of files) {
+    if (matched > 0) await new Promise(r => setTimeout(r, 150)); // ຫຼຸດຄວາມໄວການສົ່ງ request ເພື່ອບໍ່ໃຫ້ຕິດ rate limit
     const nameNoExt = file.name.replace(/\.[^.]+$/, '').trim().toLowerCase();
     const w = byKey[nameNoExt] || byKeyLoose[norm(nameNoExt)];
     if (!w) { unmatched.push(file.name); continue; }
@@ -4866,12 +4867,6 @@ async function handleFnrBulkPhotos(fileList) {
       if (upRes.error) { unmatched.push(`${file.name} (ອັບໂຫລດຜິດພາດ: ${upRes.error.message})`); continue; }
       const { error: updErr } = await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
       if (updErr) { unmatched.push(`${file.name} (ບັນທຶກຖານຂໍ້ມູນຜິດພາດ: ${updErr.message})`); continue; }
-      // ຢືນຢັນວ່າບັນທຶກແທ້ (ປ້ອງກັນກໍລະນີ update ບໍ່ error ແຕ່ບໍ່ໄດ້ປ່ຽນແທ້)
-      const { data: verify } = await sb.from('foreign_workers').select('photo_path').eq('id', w.id).single();
-      if (!verify || verify.photo_path !== path) {
-        const { error: retryErr } = await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
-        if (retryErr) { unmatched.push(`${file.name} (ບັນທຶກຊ້ຳບໍ່ສຳເລັດ: ${retryErr.message})`); continue; }
-      }
       matched++;
     } catch (e) { unmatched.push(`${file.name} (${e.message})`); }
   }
@@ -5056,6 +5051,7 @@ async function handleFnNewBulkPhotos(fileList) {
 
   let matched = 0; const unmatched = [];
   for (const file of files) {
+    if (matched > 0) await new Promise(r => setTimeout(r, 150)); // ຫຼຸດຄວາມໄວການສົ່ງ request ເພື່ອບໍ່ໃຫ້ຕິດ rate limit
     const nameNoExt = file.name.replace(/\.[^.]+$/, '').trim().toLowerCase();
     const w = byKey[nameNoExt] || byKeyLoose[norm(nameNoExt)];
     if (!w) { unmatched.push(file.name); continue; }
@@ -5065,12 +5061,6 @@ async function handleFnNewBulkPhotos(fileList) {
       if (upRes.error) { unmatched.push(`${file.name} (ອັບໂຫລດຜິດພາດ: ${upRes.error.message})`); continue; }
       const { error: updErr } = await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
       if (updErr) { unmatched.push(`${file.name} (ບັນທຶກຖານຂໍ້ມູນຜິດພາດ: ${updErr.message})`); continue; }
-      // ຢືນຢັນວ່າບັນທຶກແທ້ (ປ້ອງກັນກໍລະນີ update ບໍ່ error ແຕ່ບໍ່ໄດ້ປ່ຽນແທ້)
-      const { data: verify } = await sb.from('foreign_workers').select('photo_path').eq('id', w.id).single();
-      if (!verify || verify.photo_path !== path) {
-        const { error: retryErr } = await supabaseRetry(() => sb.from('foreign_workers').update({ photo_path: path }).eq('id', w.id));
-        if (retryErr) { unmatched.push(`${file.name} (ບັນທຶກຊ້ຳບໍ່ສຳເລັດ: ${retryErr.message})`); continue; }
-      }
       matched++;
     } catch (e) { unmatched.push(`${file.name} (${e.message})`); }
   }
