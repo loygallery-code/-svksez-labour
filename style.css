@@ -180,3 +180,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;}
 #dashboardLangRoot .i18n-en{display:none;}
 #dashboardLangRoot.lang-en .i18n-la{display:none;}
 #dashboardLangRoot.lang-en .i18n-en{display:inline;}
+
+/* ---- Dashboard zoomable cards (click-to-expand for presentations) ---- */
+[data-zoomable="1"]{cursor:zoom-in;transition:box-shadow 0.15s,transform 0.15s;}
+[data-zoomable="1"]:hover{box-shadow:0 6px 20px rgba(0,0,0,0.18)!important;transform:translateY(-2px);}
