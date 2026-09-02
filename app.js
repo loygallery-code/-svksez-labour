@@ -779,53 +779,6 @@ function pageDashboard() {
         <div style="color:#fff;font-size:14px;font-weight:700;margin-top:2px;line-height:1.35;">ເຂດເສດຖະກິດພິເສດ<br>ແຂວງສະຫວັນນະເຂດ</div>
         <div style="color:#fff;font-size:10px;opacity:0.9;margin-top:3px;">📅 <span id="heroBannerDate">...</span></div>
       </div>
-      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,0.97);border-radius:12px 12px 0 0;padding:6px 8px 6px;box-shadow:0 -2px 8px rgba(0,0,0,0.15);">
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#154360;letter-spacing:0.5px;"><span class="i18n-la">ສະຖິຕິແຮງງານຕາມປີ</span><span class="i18n-en">Labor Statistics by Year</span></div>
-        <div style="text-align:center;font-size:8px;color:#888;margin-bottom:2px;"><span class="i18n-la">ສິງຫາ 2026</span><span class="i18n-en">August 2026</span></div>
-        <svg viewBox="0 0 320 150" style="width:100%;height:118px;display:block;">
-          <!-- Y-axis gridlines + tick labels (0-7000) -->
-          <line x1="38" y1="14" x2="38" y2="102" stroke="#ccc" stroke-width="1"/>
-          <line x1="38" y1="102" x2="310" y2="102" stroke="#999" stroke-width="1"/>
-          <line x1="38" y1="80.1" x2="310" y2="80.1" stroke="#eee" stroke-width="1"/>
-          <line x1="38" y1="57.3" x2="310" y2="57.3" stroke="#eee" stroke-width="1"/>
-          <line x1="38" y1="34.4" x2="310" y2="34.4" stroke="#eee" stroke-width="1"/>
-          <text x="34" y="105" text-anchor="end" font-size="6" fill="#888">0</text>
-          <text x="34" y="83" text-anchor="end" font-size="6" fill="#888">2000</text>
-          <text x="34" y="60" text-anchor="end" font-size="6" fill="#888">4000</text>
-          <text x="34" y="37" text-anchor="end" font-size="6" fill="#888">6000</text>
-          <text x="34" y="17" text-anchor="end" font-size="6" fill="#888">7000</text>
-          <text x="9" y="58" text-anchor="middle" font-size="6.5" fill="#555" transform="rotate(-90 9 58)"><tspan class="i18n-la">ຈຳນວນແຮງງານ</tspan></text>
-          <text x="174" y="145" text-anchor="middle" font-size="6.5" fill="#555"><tspan class="i18n-la">ປີ</tspan><tspan class="i18n-en">Year</tspan></text>
-          <!-- 2023 -->
-          <rect x="54" y="49.1" width="16" height="52.9" fill="#2874a6"/>
-          <rect x="74" y="98.8" width="10" height="3.2" fill="#8e44ad"/>
-          <text x="62" y="46" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">4208</text>
-          <text x="79" y="97" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">253</text>
-          <text x="72" y="112" text-anchor="middle" font-size="6.5" fill="#555">2023</text>
-          <!-- 2024 -->
-          <rect x="122" y="33.6" width="16" height="68.4" fill="#2874a6"/>
-          <rect x="142" y="95.8" width="10" height="6.2" fill="#8e44ad"/>
-          <text x="130" y="30.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">5441</text>
-          <text x="147" y="93.7" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">493</text>
-          <text x="140" y="112" text-anchor="middle" font-size="6.5" fill="#555">2024</text>
-          <!-- 2025 -->
-          <rect x="190" y="24.6" width="16" height="77.4" fill="#2874a6"/>
-          <rect x="210" y="95.25" width="10" height="6.75" fill="#8e44ad"/>
-          <text x="198" y="21.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">6160</text>
-          <text x="215" y="93.2" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">537</text>
-          <text x="208" y="112" text-anchor="middle" font-size="6.5" fill="#555">2025</text>
-          <!-- 4.2026 -->
-          <rect x="258" y="27.6" width="16" height="74.4" fill="#2874a6"/>
-          <rect x="278" y="95.02" width="10" height="6.98" fill="#8e44ad"/>
-          <text x="266" y="24.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">5916</text>
-          <text x="283" y="93" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">555</text>
-          <text x="276" y="112" text-anchor="middle" font-size="6.5" fill="#555">4.2026</text>
-        </svg>
-        <div style="display:flex;justify-content:center;gap:14px;margin-top:1px;font-size:8px;color:#555;">
-          <span><span style="display:inline-block;width:8px;height:8px;background:#2874a6;border-radius:2px;margin-right:3px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
-          <span><span style="display:inline-block;width:8px;height:8px;background:#8e44ad;border-radius:2px;margin-right:3px;vertical-align:middle;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
-        </div>
-      </div>
     </div>
 
 
@@ -890,6 +843,63 @@ function pageDashboard() {
     </div>
   </div>
 
+  <!-- ROW 1.5: Yearly Labor Statistics chart (detailed design) -->
+  <div class="card" style="margin-bottom:20px;padding:28px 32px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,0.08);background:#fff;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:24px;font-weight:700;color:#1a1f36;"><span class="i18n-la">ສະຖິຕິແຮງງານຕາມປີ</span><span class="i18n-en">Labor Statistics by Year</span></div>
+        <div style="font-size:14px;color:#6b7280;margin-top:6px;">
+          <span class="i18n-la">ຂໍ້ມູນອັບເດດລ່າສຸດ ເດືອນ</span><span class="i18n-en">Latest data updated through</span>
+          <span id="dashLatestMonthBadge" onclick="alert('ຂໍ້ມູນປັບປຸງອັດຕະໂນມັດຕາມເດືອນ-ປີປັດຈຸບັນຂອງລະບົບ')" style="display:inline-block;border:1px dashed #1e88e5;background:#eaf4fd;color:#1e88e5;font-weight:600;padding:2px 10px;border-radius:6px;margin-left:4px;cursor:pointer;">...</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:#eaf4fd;color:#1e88e5;font-size:13px;font-weight:600;padding:6px 14px;border-radius:20px;">✔️ <span class="i18n-la">Data Verifiable</span><span class="i18n-en" style="font-weight:600;">Data Verifiable</span></div>
+    </div>
+    <svg viewBox="0 0 900 340" style="width:100%;height:auto;max-height:340px;display:block;margin-top:16px;">
+      <line x1="70" y1="20" x2="70" y2="280" stroke="#E5E7EB" stroke-width="1"/>
+      <line x1="70" y1="280" x2="860" y2="280" stroke="#9aa3af" stroke-width="1"/>
+      <line x1="70" y1="215" x2="860" y2="215" stroke="#E5E7EB" stroke-width="1"/>
+      <line x1="70" y1="150" x2="860" y2="150" stroke="#E5E7EB" stroke-width="1"/>
+      <line x1="70" y1="85"  x2="860" y2="85"  stroke="#E5E7EB" stroke-width="1"/>
+      <line x1="70" y1="20"  x2="860" y2="20"  stroke="#E5E7EB" stroke-width="1"/>
+      <text x="62" y="284" text-anchor="end" font-size="13" fill="#6b7280">0</text>
+      <text x="62" y="219" text-anchor="end" font-size="13" fill="#6b7280">2k</text>
+      <text x="62" y="154" text-anchor="end" font-size="13" fill="#6b7280">4k</text>
+      <text x="62" y="89"  text-anchor="end" font-size="13" fill="#6b7280">6k</text>
+      <text x="62" y="24"  text-anchor="end" font-size="13" fill="#6b7280">8k</text>
+      <text x="20" y="150" text-anchor="middle" font-size="13" fill="#6b7280" transform="rotate(-90 20 150)"><tspan class="i18n-la">ຈຳນວນແຮງງານ (ຄົນ)</tspan><tspan class="i18n-en">Workforce (persons)</tspan></text>
+      <!-- 2023 -->
+      <rect x="124.75" y="143.24" width="50" height="136.76" rx="3" fill="#1E88E5"/>
+      <rect x="182.75" y="271.78" width="30" height="8.22" rx="2" fill="#8E24AA"/>
+      <text x="149.75" y="133" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1f36">4208</text>
+      <text x="197.75" y="266" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1f36">253</text>
+      <text x="168.75" y="300" text-anchor="middle" font-size="14" fill="#374151">2023</text>
+      <!-- 2024 -->
+      <rect x="322.25" y="103.17" width="50" height="176.83" rx="3" fill="#1E88E5"/>
+      <rect x="380.25" y="263.98" width="30" height="16.02" rx="2" fill="#8E24AA"/>
+      <text x="347.25" y="93" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1f36">5441</text>
+      <text x="395.25" y="258" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1f36">493</text>
+      <text x="366.25" y="300" text-anchor="middle" font-size="14" fill="#374151">2024</text>
+      <!-- 2025 -->
+      <rect x="519.75" y="79.8" width="50" height="200.2" rx="3" fill="#1E88E5"/>
+      <rect x="577.75" y="262.55" width="30" height="17.45" rx="2" fill="#8E24AA"/>
+      <text x="544.75" y="70" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1f36">6160</text>
+      <text x="592.75" y="257" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1f36">537</text>
+      <text x="563.75" y="300" text-anchor="middle" font-size="14" fill="#374151">2025</text>
+      <!-- Latest (current) partial year — lighter blue -->
+      <rect x="717.25" y="87.73" width="50" height="192.27" rx="3" fill="#64B5F6"/>
+      <rect x="775.25" y="261.96" width="30" height="18.04" rx="2" fill="#8E24AA"/>
+      <text x="742.25" y="78" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1f36">5916</text>
+      <text x="790.25" y="256" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1f36">555</text>
+      <text id="dashLatestYearAxisLabel" x="761.25" y="300" text-anchor="middle" font-size="14" fill="#374151">...</text>
+    </svg>
+    <div style="display:flex;justify-content:center;align-items:center;gap:24px;margin-top:14px;">
+      <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;"><span style="display:inline-block;width:12px;height:12px;background:#1E88E5;border-radius:3px;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;"><span style="display:inline-block;width:12px;height:12px;background:#8E24AA;border-radius:3px;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#6b7280;margin-top:12px;">🏛️ <span class="i18n-la">ສະຖິຕິແຮງງານແຫ່ງຊາດ</span><span class="i18n-en">National Labour Statistics</span></div>
+  </div>
+
   <!-- ROW 2: Zone table (full) -->
   <div class="card" style="margin-bottom:20px;">
     <div class="card-header"><span class="card-title"><span class="i18n-la">🏭 ຕາຕະລາງແຮງງານຕາມເຂດ (ເດືອນປັດຈຸບັນ)</span><span class="i18n-en" style="font-size:11px;color:#555;font-weight:400;">Workforce by Zone (Current Month)</span></span></div>
@@ -936,6 +946,13 @@ async function loadDashboard() {
   const monthNames = ['','ມັງກອນ','ກຸມພາ','ມີນາ','ເມສາ','ພຶດສະພາ','ມິຖຸນາ','ກໍລະກົດ','ສິງຫາ','ກັນຍາ','ຕຸລາ','ພະຈິກ','ທັນວາ'];
   const hbd = document.getElementById('heroBannerDate');
   if(hbd) hbd.textContent = monthNames[month] + ' ' + year;
+
+  // ອັບເດດ badge ເດືອນປັດຈຸບັນຢູ່ກຣາຟ "ສະຖິຕິແຮງງານຕາມປີ" ໃຫ້ອັດຕະໂນມັດຕາມເດືອນ-ປີປັດຈຸບັນ
+  const monthNamesEn = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const latestBadge = document.getElementById('dashLatestMonthBadge');
+  if(latestBadge) latestBadge.innerHTML = `<span class="i18n-la">${monthNames[month]} ${year}</span><span class="i18n-en">${monthNamesEn[month]} ${year}</span>`;
+  const latestAxisLabel = document.getElementById('dashLatestYearAxisLabel');
+  if(latestAxisLabel) latestAxisLabel.textContent = month + '/' + year;
 
   // ດຶງ live data ຈາກ lao_workers + foreign_workers ໂດຍກົງ (ບໍ່ໃຊ້ embedded join — ໃຊ້ zone ຈາກ activeCompanies ແທນ)
   const [{ data: laoData, error: laoErr }, { data: fwData, error: fwErr }] = await Promise.all([
