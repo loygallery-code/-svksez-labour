@@ -175,3 +175,8 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;}
   .main-content{padding:8px!important;}
   .card-body{padding:12px!important;}
 }
+
+/* ---- Dashboard bilingual (LA/EN) toggle ---- */
+#dashboardLangRoot .i18n-en{display:none;}
+#dashboardLangRoot.lang-en .i18n-la{display:none;}
+#dashboardLangRoot.lang-en .i18n-en{display:inline;}

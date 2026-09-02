@@ -1,4 +1,5 @@
 let currentUser = null; // {username, role:'admin'|'company', companyId, companyName, zone}
+let dashLang = 'la'; // 'la' or 'en' — language toggle for the overview dashboard page
 let allCompanies = [];
 let activeCompanies = []; // companies excluding suspended ones — used everywhere except the company management list
 let notifications = [];
@@ -764,6 +765,10 @@ function pageDashboard() {
   const now = new Date();
   const monthNames = ['','ມັງກອນ','ກຸມພາ','ມີນາ','ເມສາ','ພຶດສະພາ','ມິຖຸນາ','ກໍລະກົດ','ສິງຫາ','ກັນຍາ','ຕຸລາ','ພະຈິກ','ທັນວາ'];
   return `
+  <div id="dashboardLangRoot">
+  <div style="text-align:right;margin-bottom:10px;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleDashLang()">🌐 <span id="dashLangBtnLabel">EN</span></button>
+  </div>
   <!-- ROW 1: Hero banner (left) + Stats (middle) + Pie chart (right) -->
   <div style="display:grid;grid-template-columns:360px 1fr 400px;gap:20px;margin-bottom:20px;align-items:stretch;">
     <!-- Hero image left -->
@@ -781,12 +786,12 @@ function pageDashboard() {
       <!-- Top 2 big cards -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="stat-card total" style="padding:18px 22px;">
-          <div class="stat-label">🏭 ບໍລິສັດທັງໝົດ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Total Companies</span></div>
+          <div class="stat-label"><span class="i18n-la">🏭 ບໍລິສັດທັງໝົດ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Total Companies</span></div>
           <div class="stat-value" id="dsTotalCompanies" style="font-size:38px;">-</div>
           <div style="font-size:11px;color:#888;margin-top:2px;">ທີ່ລົງທະບຽນໃນລະບົບ</div>
         </div>
         <div class="stat-card total" style="padding:18px 22px;border-color:#8e44ad;">
-          <div class="stat-label">👥 ແຮງງານລວມທັງໝົດ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Total Workforce</span></div>
+          <div class="stat-label"><span class="i18n-la">👥 ແຮງງານລວມທັງໝົດ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Total Workforce</span></div>
           <div class="stat-value" id="dsTotal" style="font-size:38px;color:#8e44ad;">-</div>
           <div style="font-size:11px;color:#888;margin-top:2px;">ລາວ + ຕ່າງປະເທດ</div>
         </div>
@@ -794,27 +799,27 @@ function pageDashboard() {
       <!-- 6 smaller cards -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
         <div class="stat-card lao" style="padding:14px 16px;">
-          <div class="stat-label">🇱🇦 ລາວລວມ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Lao Total</span></div>
+          <div class="stat-label"><span class="i18n-la">🇱🇦 ລາວລວມ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Lao Total</span></div>
           <div class="stat-value" id="dsTotalLao" style="font-size:26px;">-</div>
         </div>
         <div class="stat-card lao" style="padding:14px 16px;border-color:#1abc9c;">
-          <div class="stat-label">♀ ລາວຍິງ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Lao Female</span></div>
+          <div class="stat-label"><span class="i18n-la">♀ ລາວຍິງ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Lao Female</span></div>
           <div class="stat-value" id="dsTotalLaoF" style="font-size:26px;color:#1abc9c;">-</div>
         </div>
         <div class="stat-card lao" style="padding:14px 16px;border-color:#2980b9;">
-          <div class="stat-label">♂ ລາວຊາຍ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Lao Male</span></div>
+          <div class="stat-label"><span class="i18n-la">♂ ລາວຊາຍ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Lao Male</span></div>
           <div class="stat-value" id="dsTotalLaoM" style="font-size:26px;color:#2980b9;">-</div>
         </div>
         <div class="stat-card foreign" style="padding:14px 16px;">
-          <div class="stat-label">🌏 ຕ.ປ.ລວມ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Foreign Total</span></div>
+          <div class="stat-label"><span class="i18n-la">🌏 ຕ.ປ.ລວມ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Foreign Total</span></div>
           <div class="stat-value" id="dsTotalForeign" style="font-size:26px;">-</div>
         </div>
         <div class="stat-card foreign" style="padding:14px 16px;border-color:#e67e22;">
-          <div class="stat-label">♀ ຕ.ປ.ຍິງ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Foreign Female</span></div>
+          <div class="stat-label"><span class="i18n-la">♀ ຕ.ປ.ຍິງ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Foreign Female</span></div>
           <div class="stat-value" id="dsTotalForeignF" style="font-size:26px;color:#e67e22;">-</div>
         </div>
         <div class="stat-card foreign" style="padding:14px 16px;border-color:#c0392b;">
-          <div class="stat-label">♂ ຕ.ປ.ຊາຍ<br><span style="font-size:9px;color:#aaa;font-weight:400;">Foreign Male</span></div>
+          <div class="stat-label"><span class="i18n-la">♂ ຕ.ປ.ຊາຍ</span><span class="i18n-en" style="font-size:9px;color:#aaa;font-weight:400;display:none;">Foreign Male</span></div>
           <div class="stat-value" id="dsTotalForeignM" style="font-size:26px;color:#c0392b;">-</div>
         </div>
       </div>
@@ -829,7 +834,7 @@ function pageDashboard() {
 
     <!-- Pie chart right -->
     <div class="card" style="margin:0;display:flex;flex-direction:column;">
-      <div class="card-header"><span class="card-title">📊 ສັດສ່ວນແຮງງານຕາມສັນຊາດ (ລວມລາວ)<br><span style="font-size:11px;color:#888;font-weight:400;">Workforce by Nationality (incl. Lao)</span></span></div>
+      <div class="card-header"><span class="card-title"><span class="i18n-la">📊 ສັດສ່ວນແຮງງານຕາມສັນຊາດ (ລວມລາວ)</span><span class="i18n-en" style="font-size:11px;color:#888;font-weight:400;display:none;">Workforce by Nationality (incl. Lao)</span></span></div>
       <div class="card-body" id="dashPieChart" style="padding:16px;flex:1;display:flex;align-items:center;">
         <div style="text-align:center;color:#aaa;width:100%;">ກຳລັງໂຫຼດ...</div>
       </div>
@@ -838,16 +843,16 @@ function pageDashboard() {
 
   <!-- ROW 2: Zone table (full) -->
   <div class="card" style="margin-bottom:20px;">
-    <div class="card-header"><span class="card-title">🏭 ຕາຕະລາງແຮງງານຕາມເຂດ (ເດືອນປັດຈຸບັນ)<br><span style="font-size:11px;color:#888;font-weight:400;">Workforce by Zone (Current Month)</span></span></div>
+    <div class="card-header"><span class="card-title"><span class="i18n-la">🏭 ຕາຕະລາງແຮງງານຕາມເຂດ (ເດືອນປັດຈຸບັນ)</span><span class="i18n-en" style="font-size:11px;color:#888;font-weight:400;display:none;">Workforce by Zone (Current Month)</span></span></div>
     <div class="card-body"><div class="table-wrap"><table><thead><tr>
-      <th>ເຂດ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Zone</span></th><th>ບໍລິສັດ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Companies</span></th>
-      <th>ລາວລວມ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Lao Total</span></th><th>ລາວຊາຍ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Lao Male</span></th><th>ລາວຍິງ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Lao Female</span></th>
-      <th>ຕ.ປ.ລວມ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Foreign Total</span></th><th>ຕ.ປ.ຊາຍ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Foreign Male</span></th><th>ຕ.ປ.ຍິງ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Foreign Female</span></th>
-      <th style="background:#154360;">ລວມທັງໝົດ<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Grand Total</span></th>
+      <th><span class="i18n-la">ເຂດ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Zone</span></th><th><span class="i18n-la">ບໍລິສັດ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Companies</span></th>
+      <th><span class="i18n-la">ລາວລວມ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Lao Total</span></th><th><span class="i18n-la">ລາວຊາຍ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Lao Male</span></th><th><span class="i18n-la">ລາວຍິງ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Lao Female</span></th>
+      <th><span class="i18n-la">ຕ.ປ.ລວມ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Foreign Total</span></th><th><span class="i18n-la">ຕ.ປ.ຊາຍ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Foreign Male</span></th><th><span class="i18n-la">ຕ.ປ.ຍິງ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Foreign Female</span></th>
+      <th style="background:#154360;"><span class="i18n-la">ລວມທັງໝົດ</span><span class="i18n-en" style="font-size:9px;font-weight:400;opacity:0.8;display:none;">Grand Total</span></th>
     </tr></thead>
     <tbody id="dashZoneTable"></tbody>
     <tfoot><tr style="background:#d6eaf8;font-weight:700;">
-      <td>ລວມທຸກເຂດ<br><span style="font-size:9px;font-weight:400;color:#666;">All Zones Total</span></td>
+      <td><span class="i18n-la">ລວມທຸກເຂດ</span><span class="i18n-en" style="font-size:9px;font-weight:400;color:#666;display:none;">All Zones Total</span></td>
       <td id="ftCompanies">-</td>
       <td id="ftLaoTotal">-</td><td id="ftLaoM">-</td><td id="ftLaoF">-</td>
       <td id="ftForeignTotal">-</td><td id="ftForeignM">-</td><td id="ftForeignF">-</td>
@@ -858,11 +863,20 @@ function pageDashboard() {
 
   <!-- ROW 3: Notifications -->
   <div class="card" style="margin:0;">
-    <div class="card-header"><span class="card-title">🔔 ການແຈ້ງເຕືອນ<br><span style="font-size:11px;color:#888;font-weight:400;">Notifications</span></span></div>
+    <div class="card-header"><span class="card-title"><span class="i18n-la">🔔 ການແຈ້ງເຕືອນ</span><span class="i18n-en" style="font-size:11px;color:#888;font-weight:400;display:none;">Notifications</span></span></div>
     <div class="card-body" style="padding:12px 16px;" id="dashNotifList">
       <div style="text-align:center;color:#aaa;padding:20px 0;">ກຳລັງໂຫຼດ...</div>
     </div>
+  </div>
   </div>`;
+}
+
+function toggleDashLang() {
+  dashLang = (dashLang === 'la') ? 'en' : 'la';
+  const root = document.getElementById('dashboardLangRoot');
+  if (root) root.classList.toggle('lang-en', dashLang === 'en');
+  const btn = document.getElementById('dashLangBtnLabel');
+  if (btn) btn.textContent = (dashLang === 'la') ? 'EN' : 'ລາວ';
 }
 
 async function loadDashboard() {
