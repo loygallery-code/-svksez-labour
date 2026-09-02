@@ -779,44 +779,55 @@ function pageDashboard() {
         <div style="color:#fff;font-size:14px;font-weight:700;margin-top:2px;line-height:1.35;">ເຂດເສດຖະກິດພິເສດ<br>ແຂວງສະຫວັນນະເຂດ</div>
         <div style="color:#fff;font-size:10px;opacity:0.9;margin-top:3px;">📅 <span id="heroBannerDate">...</span></div>
       </div>
-      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,0.96);border-radius:12px 12px 0 0;padding:8px 10px 8px;box-shadow:0 -2px 8px rgba(0,0,0,0.15);">
-        <div style="text-align:center;font-size:10px;font-weight:700;color:#154360;letter-spacing:0.5px;margin-bottom:4px;"><span class="i18n-la">ສະຖິຕິແຮງງານປະຈຳປີ</span><span class="i18n-en">Yearly Workforce Statistics</span></div>
-        <div style="display:flex;align-items:flex-end;justify-content:space-around;gap:4px;height:98px;">
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-            <div style="font-size:8px;font-weight:700;color:#5dade2;margin-bottom:1px;">253</div>
-            <div style="width:22px;height:4px;background:#85c1e9;"></div>
-            <div style="width:22px;height:57px;background:linear-gradient(180deg,#1a5276,#21618c);"></div>
-            <div style="font-size:8px;font-weight:700;color:#154360;margin-top:2px;">4,208</div>
-            <div style="font-size:8px;color:#666;margin-top:1px;">2023</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-            <div style="font-size:8px;font-weight:700;color:#5dade2;margin-bottom:1px;">493</div>
-            <div style="width:22px;height:7px;background:#85c1e9;"></div>
-            <div style="width:22px;height:75px;background:linear-gradient(180deg,#1a5276,#21618c);"></div>
-            <div style="font-size:8px;font-weight:700;color:#154360;margin-top:2px;">5,441</div>
-            <div style="font-size:8px;color:#666;margin-top:1px;">2024</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-            <div style="font-size:8px;font-weight:700;color:#5dade2;margin-bottom:1px;">537</div>
-            <div style="width:22px;height:7px;background:#85c1e9;"></div>
-            <div style="width:22px;height:83px;background:linear-gradient(180deg,#1a5276,#21618c);"></div>
-            <div style="font-size:8px;font-weight:700;color:#154360;margin-top:2px;">6,160</div>
-            <div style="font-size:8px;color:#666;margin-top:1px;">2025</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-            <div style="font-size:8px;font-weight:700;color:#5dade2;margin-bottom:1px;">555</div>
-            <div style="width:22px;height:7px;background:#85c1e9;"></div>
-            <div style="width:22px;height:80px;background:linear-gradient(180deg,#1a5276,#21618c);"></div>
-            <div style="font-size:8px;font-weight:700;color:#154360;margin-top:2px;">5,916</div>
-            <div style="font-size:8px;color:#666;margin-top:1px;"><span class="i18n-la">4.2026</span><span class="i18n-en">Apr 2026</span></div>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:center;gap:14px;margin-top:6px;font-size:8px;color:#555;">
-          <span><span style="display:inline-block;width:8px;height:8px;background:#1a5276;border-radius:2px;margin-right:3px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
-          <span><span style="display:inline-block;width:8px;height:8px;background:#85c1e9;border-radius:2px;margin-right:3px;vertical-align:middle;"></span><span class="i18n-la">ຕ.ປ.ທ</span><span class="i18n-en">Foreign</span></span>
+      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,0.97);border-radius:12px 12px 0 0;padding:6px 8px 6px;box-shadow:0 -2px 8px rgba(0,0,0,0.15);">
+        <div style="text-align:center;font-size:10px;font-weight:700;color:#154360;letter-spacing:0.5px;"><span class="i18n-la">ສະຖິຕິແຮງງານຕາມປີ</span><span class="i18n-en">Labor Statistics by Year</span></div>
+        <div style="text-align:center;font-size:8px;color:#888;margin-bottom:2px;"><span class="i18n-la">ສິງຫາ 2026</span><span class="i18n-en">August 2026</span></div>
+        <svg viewBox="0 0 320 150" style="width:100%;height:118px;display:block;">
+          <!-- Y-axis gridlines + tick labels (0-7000) -->
+          <line x1="38" y1="14" x2="38" y2="102" stroke="#ccc" stroke-width="1"/>
+          <line x1="38" y1="102" x2="310" y2="102" stroke="#999" stroke-width="1"/>
+          <line x1="38" y1="80.1" x2="310" y2="80.1" stroke="#eee" stroke-width="1"/>
+          <line x1="38" y1="57.3" x2="310" y2="57.3" stroke="#eee" stroke-width="1"/>
+          <line x1="38" y1="34.4" x2="310" y2="34.4" stroke="#eee" stroke-width="1"/>
+          <text x="34" y="105" text-anchor="end" font-size="6" fill="#888">0</text>
+          <text x="34" y="83" text-anchor="end" font-size="6" fill="#888">2000</text>
+          <text x="34" y="60" text-anchor="end" font-size="6" fill="#888">4000</text>
+          <text x="34" y="37" text-anchor="end" font-size="6" fill="#888">6000</text>
+          <text x="34" y="17" text-anchor="end" font-size="6" fill="#888">7000</text>
+          <text x="9" y="58" text-anchor="middle" font-size="6.5" fill="#555" transform="rotate(-90 9 58)"><tspan class="i18n-la">ຈຳນວນແຮງງານ</tspan></text>
+          <text x="174" y="145" text-anchor="middle" font-size="6.5" fill="#555"><tspan class="i18n-la">ປີ</tspan><tspan class="i18n-en">Year</tspan></text>
+          <!-- 2023 -->
+          <rect x="54" y="49.1" width="16" height="52.9" fill="#2874a6"/>
+          <rect x="74" y="98.8" width="10" height="3.2" fill="#8e44ad"/>
+          <text x="62" y="46" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">4208</text>
+          <text x="79" y="97" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">253</text>
+          <text x="72" y="112" text-anchor="middle" font-size="6.5" fill="#555">2023</text>
+          <!-- 2024 -->
+          <rect x="122" y="33.6" width="16" height="68.4" fill="#2874a6"/>
+          <rect x="142" y="95.8" width="10" height="6.2" fill="#8e44ad"/>
+          <text x="130" y="30.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">5441</text>
+          <text x="147" y="93.7" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">493</text>
+          <text x="140" y="112" text-anchor="middle" font-size="6.5" fill="#555">2024</text>
+          <!-- 2025 -->
+          <rect x="190" y="24.6" width="16" height="77.4" fill="#2874a6"/>
+          <rect x="210" y="95.25" width="10" height="6.75" fill="#8e44ad"/>
+          <text x="198" y="21.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">6160</text>
+          <text x="215" y="93.2" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">537</text>
+          <text x="208" y="112" text-anchor="middle" font-size="6.5" fill="#555">2025</text>
+          <!-- 4.2026 -->
+          <rect x="258" y="27.6" width="16" height="74.4" fill="#2874a6"/>
+          <rect x="278" y="95.02" width="10" height="6.98" fill="#8e44ad"/>
+          <text x="266" y="24.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="#154360">5916</text>
+          <text x="283" y="93" text-anchor="middle" font-size="6.5" font-weight="700" fill="#8e44ad">555</text>
+          <text x="276" y="112" text-anchor="middle" font-size="6.5" fill="#555">4.2026</text>
+        </svg>
+        <div style="display:flex;justify-content:center;gap:14px;margin-top:1px;font-size:8px;color:#555;">
+          <span><span style="display:inline-block;width:8px;height:8px;background:#2874a6;border-radius:2px;margin-right:3px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
+          <span><span style="display:inline-block;width:8px;height:8px;background:#8e44ad;border-radius:2px;margin-right:3px;vertical-align:middle;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
         </div>
       </div>
     </div>
+
 
 
     <!-- Stats right -->
