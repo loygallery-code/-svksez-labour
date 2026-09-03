@@ -1,5 +1,6 @@
 let currentUser = null; // {username, role:'admin'|'company', companyId, companyName, zone}
 let dashLang = 'la'; // 'la' or 'en' — language toggle for the overview dashboard page
+let dashZoneCompanyData = {}; // per-company lao/foreign counts, keyed by company_id — populated by loadDashboard(), used by showZoneCompanies()
 let allCompanies = [];
 let activeCompanies = []; // companies excluding suspended ones — used everywhere except the company management list
 let notifications = [];
@@ -958,6 +959,59 @@ function toggleDashLang() {
 }
 
 // ຂະຫຍາຍບ່ອນທີ່ຄຣິກໃສ່ໃຫ້ເຕັມຈໍ (ສຳລັບ presentation — ຄຣິກໃສ່ບາຊາດ/ຕາຕະລາງ ຈະເຫັນສະເພາະສ່ວນນັ້ນຂະຫຍາຍໃຫຍ່)
+// ສະແດງລາຍລະອຽດແຕ່ລະບໍລິສັດພາຍໃນເຂດໜຶ່ງ (ຄຣິກຈາກຕາຕະລາງ "ແຮງງານຕາມເຂດ" ໜ້າພາບລວມ)
+function showZoneCompanies(zone) {
+  const companies = Object.values(dashZoneCompanyData)
+    .filter(c => c.zone === zone)
+    .map(c => ({ ...c, total: c.lao + c.foreign }))
+    .sort((a,b) => b.total - a.total);
+
+  const rows = companies.map(c => `
+    <tr>
+      <td>${esc(c.code)}</td>
+      <td>${esc(c.name)}</td>
+      <td style="text-align:center;color:#2980b9;">${c.lao}</td>
+      <td style="text-align:center;color:#c0392b;">${c.foreign}</td>
+      <td style="text-align:center;font-weight:700;color:#154360;">${c.total}</td>
+    </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px;">ບໍ່ມີບໍລິສັດຢູ່ໃນເຂດນີ້</td></tr>`;
+
+  const grandTotal = companies.reduce((s,c)=>s+c.total,0);
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;';
+  const closeFn = () => { overlay.remove(); document.removeEventListener('keydown', escHandler); };
+  overlay.onclick = closeFn;
+  const escHandler = (e) => { if (e.key === 'Escape') closeFn(); };
+  document.addEventListener('keydown', escHandler);
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:16px;width:min(700px,92vw);max-height:88vh;overflow:auto;padding:24px;position:relative;cursor:default;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.onclick = (e) => e.stopPropagation();
+  panel.innerHTML = `
+    <div style="font-size:18px;font-weight:700;color:#154360;margin-bottom:2px;">ເຂດ ${esc(zone)} — ລາຍລະອຽດແຕ່ລະບໍລິສັດ</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">${companies.length} ບໍລິສັດ, ລວມ ${grandTotal} ຄົນ</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#1a5276;color:#fff;">
+          <th style="padding:8px;text-align:left;">ລະຫັດ</th>
+          <th style="padding:8px;text-align:left;">ຊື່ບໍລິສັດ</th>
+          <th style="padding:8px;text-align:center;">ລາວ</th>
+          <th style="padding:8px;text-align:center;">ຕ່າງປະເທດ</th>
+          <th style="padding:8px;text-align:center;">ລວມ</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.title = 'ປິດ (Esc)';
+  closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;background:#f1f1f1;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;line-height:1;';
+  closeBtn.onclick = closeFn;
+  panel.appendChild(closeBtn);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+}
+
 function expandDashCard(el, ev) {
   if (ev) ev.stopPropagation();
   const overlay = document.createElement('div');
@@ -1031,12 +1085,17 @@ async function loadDashboard() {
   ['A','B','B1','C','D','E'].forEach(z => zones[z] = {companies:0, laoM:0, laoF:0, foreignM:0, foreignF:0});
   activeCompanies.forEach(c => { if(zones[c.zone]) zones[c.zone].companies++; });
 
+  // ຂໍ້ມູນແຍກຕາມບໍລິສັດ ພາຍໃນແຕ່ລະເຂດ (ສຳລັບການຄຣິກເບິ່ງລາຍລະອຽດຢູ່ຕາຕະລາງ)
+  const companyStats = {};
+  activeCompanies.forEach(c => { companyStats[c.id] = { name: c.name_lao || c.username, code: c.username, zone: c.zone, lao: 0, foreign: 0 }; });
+
   const natMap = {};
   const isFemale = g => { const s = String(g||'').trim().toUpperCase(); return s === 'ຍິງ' || s === 'FEMALE' || s === 'F'; };
   laoRows.forEach(r => {
     const z = zoneByCompany[r.company_id];
     if(isFemale(r.gender)) totalLaoF++; else totalLaoM++;
     if(z && zones[z]) { if(isFemale(r.gender)) zones[z].laoF++; else zones[z].laoM++; }
+    if(companyStats[r.company_id]) companyStats[r.company_id].lao++;
   });
   fwRows.forEach(r => {
     const z = zoneByCompany[r.company_id];
@@ -1045,8 +1104,10 @@ async function loadDashboard() {
     if(z && zones[z]) { if(isFemale(r.gender)) zones[z].foreignF++; else zones[z].foreignM++; }
     if(!natMap[nat]) natMap[nat] = 0;
     natMap[nat]++;
+    if(companyStats[r.company_id]) companyStats[r.company_id].foreign++;
   });
   if((totalLaoM+totalLaoF) > 0) natMap['ລາວ'] = totalLaoM+totalLaoF;
+  dashZoneCompanyData = companyStats; // ເກັບໄວ້ໃນຕົວແປ global ໃຫ້ showZoneCompanies() ໃຊ້ໄດ້
 
   const totalLao     = totalLaoM + totalLaoF;
   const totalForeign = totalForeignM + totalForeignF;
@@ -1097,8 +1158,8 @@ async function loadDashboard() {
   if(tbody) tbody.innerHTML = Object.entries(zones).map(([z,d]) => {
     const lt=d.laoM+d.laoF, ft=d.foreignM+d.foreignF, tot=lt+ft;
     ftC+=d.companies; ftLT+=lt; ftLM+=d.laoM; ftLF+=d.laoF; ftFT+=ft; ftFM+=d.foreignM; ftFF+=d.foreignF;
-    return `<tr>
-      <td><span style="display:inline-block;padding:2px 10px;border-radius:12px;background:#1a5276;color:#fff;font-weight:700;font-size:12px;">ເຂດ ${z}</span></td>
+    return `<tr onclick="event.stopPropagation();showZoneCompanies('${z}')" style="cursor:pointer;" title="ຄຣິກເບິ່ງລາຍລະອຽດແຕ່ລະບໍລິສັດໃນເຂດນີ້" onmouseenter="this.style.background='#f0f6fb'" onmouseleave="this.style.background=''">
+      <td><span style="display:inline-block;padding:2px 10px;border-radius:12px;background:#1a5276;color:#fff;font-weight:700;font-size:12px;">ເຂດ ${z} 🔍</span></td>
       <td style="text-align:center;">${d.companies}</td>
       <td style="text-align:center;font-weight:600;">${lt}</td>
       <td style="text-align:center;color:#2980b9;">${d.laoM}</td>
