@@ -5763,63 +5763,174 @@ function toggleSelectAllWorkers(cb) {
   document.querySelectorAll('.fwWorkerChk').forEach(c => c.checked = cb.checked);
 }
 
+// ປັອບອັບຂໍລາຍລະອຽດໃບອະນຸຍາດໂຄຕ້ານຳໃຊ້ແຮງງານຕ່າງປະເທດ (ເລກທີ, ວັນທີ, ໄຟລ໌ PDF) ກ່ອນສ້າງ/ພິມ/ສົ່ງໃບສະເໜີ
+function openFwQuotaInfoModal(onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.id = 'fwQuotaInfoOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:16px;width:min(520px,94vw);max-height:90vh;overflow:auto;padding:26px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.onclick = (e) => e.stopPropagation();
+  panel.innerHTML = `
+    <div style="font-size:17px;font-weight:700;color:#154360;margin-bottom:4px;">ໃບອະນຸຍາດໂຄຕ້ານຳໃຊ້ແຮງງານຕ່າງປະເທດ</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;">ກະລຸນາຕື່ມຂໍ້ມູນນີ້ກ່ອນ ຈຶ່ງຈະສາມາດສ້າງ/ພິມ/ສົ່ງໃບສະເໜີໄດ້</div>
+    <div class="form-field" style="margin-bottom:12px;"><label>ສະບັບເລກທີ <span style="color:red;">*</span></label><input type="text" id="fwQuotaNoInput" style="width:100%;"></div>
+    <div class="form-field" style="margin-bottom:12px;"><label>ລົງວັນທີ <span style="color:red;">*</span></label><input type="date" id="fwQuotaDateInput" style="width:100%;"></div>
+    <div class="form-field" style="margin-bottom:6px;"><label>ອັບໂຫລດເອກະສານ (PDF) <span style="color:red;">*</span></label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fwQuotaFileInput').click()">📎 ເລືອກໄຟລ໌</button>
+        <span id="fwQuotaFileStatus" style="font-size:12px;color:#888;">ຍັງບໍ່ໄດ້ເລືອກໄຟລ໌</span>
+      </div>
+      <input type="file" id="fwQuotaFileInput" accept="application/pdf" style="display:none;">
+    </div>
+    <div style="text-align:right;margin-top:18px;display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-secondary" id="fwQuotaCancelBtn">ຍົກເລີກ</button>
+      <button class="btn btn-primary" id="fwQuotaConfirmBtn">✅ ຢືນຢັນ ແລະ ສ້າງໃບສະເໜີ</button>
+    </div>
+  `;
+  const closeFn = () => overlay.remove();
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  let quotaFile = null;
+  document.getElementById('fwQuotaFileInput').onchange = (e) => {
+    quotaFile = e.target.files[0] || null;
+    document.getElementById('fwQuotaFileStatus').textContent = quotaFile ? `✅ ${quotaFile.name}` : 'ຍັງບໍ່ໄດ້ເລືອກໄຟລ໌';
+  };
+  document.getElementById('fwQuotaCancelBtn').onclick = closeFn;
+  document.getElementById('fwQuotaConfirmBtn').onclick = async () => {
+    const no = document.getElementById('fwQuotaNoInput').value.trim();
+    const date = document.getElementById('fwQuotaDateInput').value;
+    if (!no || !date || !quotaFile) { alert('ກະລຸນາຕື່ມສະບັບເລກທີ, ວັນທີ ແລະ ອັບໂຫລດເອກະສານ PDF ໃຫ້ຄົບກ່ອນ'); return; }
+    const confirmBtn = document.getElementById('fwQuotaConfirmBtn');
+    confirmBtn.disabled = true; confirmBtn.textContent = '⏳ ກຳລັງອັບໂຫລດ...';
+    const path = `quota/${currentUser.companyId}_${Date.now()}.pdf`;
+    const { error } = await supabaseRetry(() => sb.storage.from('company-docs').upload(path, quotaFile, { upsert: true }));
+    if (error) { alert('ອັບໂຫລດຜິດພາດ: ' + error.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນ ແລະ ສ້າງໃບສະເໜີ'; return; }
+    closeFn();
+    onConfirm({ no, date, file: path });
+  };
+}
+
+// ປັອບອັບຂໍລາຍລະອຽດໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ (ເລກທີ, ວັນທີ, ໄຟລ໌ PDF) ກ່ອນສ້າງ/ພິມ/ສົ່ງໃບສະເໜີ
+function openFwTaxInfoModal(onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.id = 'fwTaxInfoOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:16px;width:min(520px,94vw);max-height:90vh;overflow:auto;padding:26px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.onclick = (e) => e.stopPropagation();
+  panel.innerHTML = `
+    <div style="font-size:17px;font-weight:700;color:#154360;margin-bottom:4px;">ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;">ກະລຸນາຕື່ມຂໍ້ມູນນີ້ກ່ອນ ຈຶ່ງຈະສາມາດສ້າງ/ພິມ/ສົ່ງໃບສະເໜີໄດ້</div>
+    <div class="form-field" style="margin-bottom:12px;"><label>ສະບັບເລກທີ <span style="color:red;">*</span></label><input type="text" id="fwTaxNoInput" style="width:100%;"></div>
+    <div class="form-field" style="margin-bottom:12px;"><label>ລົງວັນທີ <span style="color:red;">*</span></label><input type="date" id="fwTaxDateInput" style="width:100%;"></div>
+    <div class="form-field" style="margin-bottom:6px;"><label>ອັບໂຫລດເອກະສານ (PDF) <span style="color:red;">*</span></label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fwTaxFileInput').click()">📎 ເລືອກໄຟລ໌</button>
+        <span id="fwTaxFileStatus" style="font-size:12px;color:#888;">ຍັງບໍ່ໄດ້ເລືອກໄຟລ໌</span>
+      </div>
+      <input type="file" id="fwTaxFileInput" accept="application/pdf" style="display:none;">
+    </div>
+    <div style="text-align:right;margin-top:18px;display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-secondary" id="fwTaxCancelBtn">ຍົກເລີກ</button>
+      <button class="btn btn-primary" id="fwTaxConfirmBtn">✅ ຢືນຢັນ ແລະ ສ້າງໃບສະເໜີ</button>
+    </div>
+  `;
+  const closeFn = () => overlay.remove();
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  let taxFile = null;
+  document.getElementById('fwTaxFileInput').onchange = (e) => {
+    taxFile = e.target.files[0] || null;
+    document.getElementById('fwTaxFileStatus').textContent = taxFile ? `✅ ${taxFile.name}` : 'ຍັງບໍ່ໄດ້ເລືອກໄຟລ໌';
+  };
+  document.getElementById('fwTaxCancelBtn').onclick = closeFn;
+  document.getElementById('fwTaxConfirmBtn').onclick = async () => {
+    const no = document.getElementById('fwTaxNoInput').value.trim();
+    const date = document.getElementById('fwTaxDateInput').value;
+    if (!no || !date || !taxFile) { alert('ກະລຸນາຕື່ມສະບັບເລກທີ, ວັນທີ ແລະ ອັບໂຫລດເອກະສານ PDF ໃຫ້ຄົບກ່ອນ'); return; }
+    const confirmBtn = document.getElementById('fwTaxConfirmBtn');
+    confirmBtn.disabled = true; confirmBtn.textContent = '⏳ ກຳລັງອັບໂຫລດ...';
+    const path = `taxcert/${currentUser.companyId}_${Date.now()}.pdf`;
+    const { error } = await supabaseRetry(() => sb.storage.from('company-docs').upload(path, taxFile, { upsert: true }));
+    if (error) { alert('ອັບໂຫລດຜິດພາດ: ' + error.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນ ແລະ ສ້າງໃບສະເໜີ'; return; }
+    closeFn();
+    onConfirm({ no, date, file: path });
+  };
+}
+
 async function generateLetterFromSelected() {
   const checked = Array.from(document.querySelectorAll('.fwWorkerChk:checked'));
   if (checked.length === 0) { alert('ກະລຸນາເລືອກແຮງງານຢ່າງໜ້ອຍ 1 ຄົນ'); return; }
   if (checked.length > 10) { alert('ສາມາດເລືອກສູງສຸດ 10 ຄົນ ຕໍ່ໃບສະເໜີ'); return; }
 
-  const btn = document.querySelector('#fwLetterPanel .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ ກຳລັງສ້າງ...'; }
+  // ຕ້ອງຕື່ມຂໍ້ມູນໃບອະນຸຍາດໂຄຕ້າ + ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ (ເລກທີ/ວັນທີ/ໄຟລ໌ PDF) ກ່ອນ ຈຶ່ງຈະສ້າງໃບສະເໜີໄດ້
+  openFwQuotaInfoModal(async (quotaInfo) => {
+  openFwTaxInfoModal(async (taxInfo) => {
+    const btn = document.querySelector('#fwLetterPanel .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ ກຳລັງສ້າງ...'; }
 
-  try {
-    const type = document.getElementById('fwLetterType').value;
-    const selectedWorkers = checked.map((cb, i) => {
-      const w = JSON.parse(cb.dataset.worker.replace(/&#39;/g, "'"));
-      return { ...w, seq: i + 1 };
-    });
-    const maleCount   = selectedWorkers.filter(w => w.gender !== 'ຍິງ').length;
-    const femaleCount = selectedWorkers.filter(w => w.gender === 'ຍິງ').length;
-
-    // Use already-loaded company data — no DB fetch needed
-    const co = currentUser.companyData || {};
-
-    // Auto generate document number: FN/FNR + YY + SEQ + companyUsername
-    let window_docNo = '';
     try {
-      const { data: allReqs } = await sb.from('fw_requests').select('id');
-      const seq = (allReqs?.length || 0) + 1;
-      const yr = String(new Date().getFullYear()).slice(-2);
-      const pfx = type === 'new' ? 'FN' : 'FNR';
-      window_docNo = `${pfx}${yr}${seq}${esc(co.username || '')}`;
-    } catch(e) { window_docNo = ''; }
+      const type = document.getElementById('fwLetterType').value;
+      const selectedWorkers = checked.map((cb, i) => {
+        const w = JSON.parse(cb.dataset.worker.replace(/&#39;/g, "'"));
+        return { ...w, seq: i + 1 };
+      });
+      const maleCount   = selectedWorkers.filter(w => w.gender !== 'ຍິງ').length;
+      const femaleCount = selectedWorkers.filter(w => w.gender === 'ຍິງ').length;
 
-    // Store globally
-    window._currentFwLetterWorkers = selectedWorkers;
-    window._currentFwLetterCompany = co;
-    window._currentFwLetterType    = type;
-    window._currentFwDocNo         = window_docNo;
+      // Use already-loaded company data — no DB fetch needed
+      const co = currentUser.companyData || {};
 
-    // Fire-and-forget: save to DB in background — never block on this
-    (async () => {
+      // Auto generate document number: FN/FNR + YY + SEQ + companyUsername
+      let window_docNo = '';
       try {
-        await sb.from('fw_requests').insert({
-          company_id: currentUser.companyId,
-          request_type: type,
-          workers: selectedWorkers,
-          male_count: maleCount,
-          female_count: femaleCount
-        });
-      } catch(e) { /* ignore */ }
-    })();
+        const { data: allReqs } = await sb.from('fw_requests').select('id');
+        const seq = (allReqs?.length || 0) + 1;
+        const yr = String(new Date().getFullYear()).slice(-2);
+        const pfx = type === 'new' ? 'FN' : 'FNR';
+        window_docNo = `${pfx}${yr}${seq}${esc(co.username || '')}`;
+      } catch(e) { window_docNo = ''; }
 
-    // Open official documents immediately
-    printFwRequestLetter();
+      // Store globally
+      window._currentFwLetterWorkers = selectedWorkers;
+      window._currentFwLetterCompany = co;
+      window._currentFwLetterType    = type;
+      window._currentFwDocNo         = window_docNo;
+      window._currentFwQuotaInfo     = quotaInfo; // {no, date, file} — ຕື່ມຈາກປັອບອັບ, ບໍ່ໄດ້ດຶງຈາກໂປຣໄຟລ໌ບໍລິສັດອີກຕໍ່ໄປ
+      window._currentFwTaxInfo       = taxInfo;   // {no, date, file} — ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ
 
-  } catch(e) {
-    alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '📄 ສ້າງໃບສະເໜີ'; }
-  }
+      // Fire-and-forget: save to DB in background — never block on this
+      (async () => {
+        try {
+          await sb.from('fw_requests').insert({
+            company_id: currentUser.companyId,
+            request_type: type,
+            workers: selectedWorkers,
+            male_count: maleCount,
+            female_count: femaleCount,
+            quota_no: quotaInfo.no,
+            quota_date: quotaInfo.date,
+            quota_file: quotaInfo.file,
+            tax_cert_no: taxInfo.no,
+            tax_cert_date: taxInfo.date,
+            tax_cert_file: taxInfo.file
+          });
+        } catch(e) { /* ignore */ }
+      })();
+
+      // Open official documents immediately
+      printFwRequestLetter();
+
+    } catch(e) {
+      alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '📄 ສ້າງໃບສະເໜີ'; }
+    }
+  });
+  });
 }
 
 function buildFwLetterFromWorkers(co, workers, type, maleCount, femaleCount) {
@@ -6793,7 +6904,8 @@ function buildFwRequestLetterHtml(r) {
       <h3 style="text-align:center;margin:14px 0;">ໃບສະເໜີ</h3>
       <p><b>ຮຽນ:</b> ທ່ານຜູ້ອຳນວຍການ ເຂດເສດຖະກິດພິເສດແຂວງສະຫວັນນະເຂດ</p>
       <p><b>ເລື່ອງ:</b> ${subject}</p>
-      <p>- ອີງຕາມ ໃບອະນຸມັດໂຄຕ້າ ສະບັບເລກທີ ${c.fw_quota_no || '..................'} ລົງວັນທີ ${c.fw_quota_date || '..................'}</p>
+      <p>- ອີງຕາມ ໃບອະນຸຍາດໂຄຕ້ານຳໃຊ້ແຮງງານຕ່າງປະເທດ ສະບັບເລກທີ ${r.quota_no || c.fw_quota_no || '..................'} ລົງວັນທີ ${r.quota_date || c.fw_quota_date || '..................'}</p>
+      <p>- ອີງຕາມ ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ ສະບັບເລກທີ ${r.tax_cert_no || '..................'} ລົງວັນທີ ${r.tax_cert_date || '..................'}</p>
       <p>- ອີງຕາມ ໃບອະນຸຍາດປະກອບກິດຈະການ ສະບັບເລກທີ ${c.biz_reg_no || '..................'} ລົງວັນທີ ${c.biz_reg_date || '..................'}</p>
       <p>- ອີງຕາມ ໃບອະນຸມັດໃຫ້ນຳເຂົ້າແຮງງານຕ່າງປະເທດ ສະບັບເລກທີ ${c.fw_import_no || '..................'} ລົງວັນທີ ${c.fw_import_date || '..................'}</p>
       <p>ຂໍແຈ້ງໃບສະເໜີຂອງບໍລິສັດ <b>${esc(c.name_lao || '')}</b> ມີຈຸດປະສົງສະເໜີມາໃຫ້ທຳການ${actionText} ເພື່ອມາເຮັດວຽກປະຈຳ ຈຳນວນ <b>${r.male_count || 0} ຄົນ ຊາຍ / ${r.female_count || 0} ຄົນ ຍິງ</b> ໂດຍແຮງງານທັງໝົດນີ້ແມ່ນຈະຢູ່ໃນຄວາມຮັບຜິດຊອບຂອງບໍລິສັດ ດັ່ງລາຍຊື່ລຸ່ມນີ້:</p>
@@ -6823,6 +6935,8 @@ function printFwRequestLetter() {
   const co      = window._currentFwLetterCompany || {};
   const type    = window._currentFwLetterType || 'new';
   const docNo   = window._currentFwDocNo || '';
+  const quotaInfo = window._currentFwQuotaInfo || {}; // {no, date, file} — ຕື່ມຈາກປັອບອັບກ່ອນສ້າງໃບສະເໜີ
+  const taxInfo = window._currentFwTaxInfo || {}; // {no, date, file} — ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ
   if (!workers.length) { alert('ບໍ່ມີຂໍ້ມູນ worker'); return; }
 
   const isNew   = type === 'new';
@@ -6869,7 +6983,10 @@ function printFwRequestLetter() {
     &nbsp;&nbsp;-&nbsp;&nbsp;ອີງຕາມ ໃບທະບຽນວິສາຫະກິດ ສະບັບເລກທີ ${co.biz_reg_no||'.................................'} ລົງວັນທີ ${co.biz_reg_date||'..........................'}
   </div>
   <div style="text-indent:2em;text-align:justify;font-size:12pt;margin:4px 0;">
-    &nbsp;&nbsp;-&nbsp;&nbsp;ອີງຕາມ ໃບອະນຸຍາດໂກຕ້ານຳໃຊ້ແຮງງານຕ່າງປະເທດ ສະບັບເລກທີ ${co.fw_quota_no||'......................'}, ລົງວັນທີ ${co.fw_quota_date||'......................'}
+    &nbsp;&nbsp;-&nbsp;&nbsp;ອີງຕາມ ໃບອະນຸຍາດໂກຕ້ານຳໃຊ້ແຮງງານຕ່າງປະເທດ ສະບັບເລກທີ ${quotaInfo.no||'......................'}, ລົງວັນທີ ${quotaInfo.date||'......................'}
+  </div>
+  <div style="text-indent:2em;text-align:justify;font-size:12pt;margin:4px 0;">
+    &nbsp;&nbsp;-&nbsp;&nbsp;ອີງຕາມ ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ ສະບັບເລກທີ ${taxInfo.no||'......................'}, ລົງວັນທີ ${taxInfo.date||'......................'}
   </div>
   <div style="height:10px;"></div>
   <div style="text-indent:4em;text-align:justify;font-size:12pt;margin:6px 0;line-height:1.8;">
