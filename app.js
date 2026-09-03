@@ -983,8 +983,6 @@ function showCompanyDetail(id) {
   docRows += docRow('ໃບທະບຽນປະກັນສັງຄົມ', c.social_no, c.social_date, c.social_file);
   docRows += docRow('ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ', c.rule_no, c.rule_date, c.rule_file);
   docRows += docRow('ໃບຢັ້ງຢືນກວດສຸຂະພາບ', c.health_no, c.health_date, c.health_file);
-  docRows += docRow('ໃບອະນຸມັດໂຄຕ້າ', c.fw_quota_no, c.fw_quota_date, null);
-  docRows += docRow('ໃບອະນຸມັດນຳເຂົ້າແຮງງານ ຕປທ', c.fw_import_no, c.fw_import_date, null);
   (c.extra_docs || []).forEach(d => { docRows += docRow(d.name || 'ເອກະສານອື່ນໆ', d.no, d.date, d.file); });
 
   const overlay = document.createElement('div');
@@ -1507,11 +1505,11 @@ async function openAddCompany() {
   document.getElementById('companyModalTitle').textContent = 'ເພີ້ມບໍລິສັດໃໝ່';
   ['cNameLao','cNameEng','cPassword','cUsername','dBizNo','dBizFile','dInvNo','dInvFile',
    'dTaxNo','dTaxFile','dSocNo','dSocFile','dRuleNo','dRuleFile','dRuleStatus',
-   'dHealthNo','dHealthFile','dHealthStatus','dFwQuotaNo','dFwImportNo'].forEach(id => {
+   'dHealthNo','dHealthFile','dHealthStatus'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  ['cZone','dBizDate','dInvDate','dTaxDate','dSocDate','dRuleDate','dHealthDate','dFwQuotaDate','dFwImportDate'].forEach(id => {
+  ['cZone','dBizDate','dInvDate','dTaxDate','dSocDate','dRuleDate','dHealthDate'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1551,10 +1549,6 @@ async function openEditCompany(id) {
   document.getElementById('dHealthNo').value = c.health_no || '';
   document.getElementById('dHealthDate').value = c.health_date || '';
   document.getElementById('dHealthFile').value = c.health_file || '';
-  document.getElementById('dFwQuotaNo').value = c.fw_quota_no || '';
-  document.getElementById('dFwQuotaDate').value = c.fw_quota_date || '';
-  document.getElementById('dFwImportNo').value = c.fw_import_no || '';
-  document.getElementById('dFwImportDate').value = c.fw_import_date || '';
   updateRuleStatus(); updateHealthStatus();
 
   // Extra docs
@@ -1676,8 +1670,6 @@ async function saveCompany() {
     social_no: document.getElementById('dSocNo').value, social_date: document.getElementById('dSocDate').value || null, social_file: document.getElementById('dSocFile').value,
     rule_no: document.getElementById('dRuleNo').value, rule_date: document.getElementById('dRuleDate').value || null, rule_file: document.getElementById('dRuleFile').value,
     health_no: document.getElementById('dHealthNo').value, health_date: document.getElementById('dHealthDate').value || null, health_file: document.getElementById('dHealthFile').value,
-    fw_quota_no: document.getElementById('dFwQuotaNo').value, fw_quota_date: document.getElementById('dFwQuotaDate').value || null,
-    fw_import_no: document.getElementById('dFwImportNo').value, fw_import_date: document.getElementById('dFwImportDate').value || null,
     extra_docs: extraDocs, updated_at: new Date().toISOString()
   };
 
