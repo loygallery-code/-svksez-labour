@@ -130,7 +130,7 @@
       <div class="form-row">
         <div class="form-field"><label>ໃບທະບຽນວິສາຫະກິດ - ເລກທີ</label><input type="text" id="dBizNo"></div>
         <div class="form-field"><label>ວັນທີ</label><input type="date" id="dBizDate"></div>
-        <div class="form-field"><label>ໄຟລ (URL)</label><input type="text" id="dBizFile" placeholder="ລິ້ງ PDF/ຮູບ"></div>
+        <div class="form-field"><label>ໄຟລ (URL/ອັບໂຫລດ)</label><div style="display:flex;gap:4px;"><input type="text" id="dBizFile" placeholder="ລິ້ງ PDF/ຮູບ" style="flex:1;"><button type="button" class="btn btn-secondary btn-sm" onclick="triggerCompanyDocUpload('dBizFile')" title="ອັບໂຫລດໄຟລ໌">📎</button></div></div>
       </div>
       <!-- Doc: ໃບອະນຸມັດໂຄຕ້າ -->
       <div class="form-row">
@@ -146,32 +146,32 @@
       <div class="form-row">
         <div class="form-field"><label>ໃບອະນຸຍາດລົງທຶນ - ເລກທີ</label><input type="text" id="dInvNo"></div>
         <div class="form-field"><label>ວັນທີ</label><input type="date" id="dInvDate"></div>
-        <div class="form-field"><label>ໄຟລ (URL)</label><input type="text" id="dInvFile" placeholder="ລິ້ງ PDF/ຮູບ"></div>
+        <div class="form-field"><label>ໄຟລ (URL/ອັບໂຫລດ)</label><div style="display:flex;gap:4px;"><input type="text" id="dInvFile" placeholder="ລິ້ງ PDF/ຮູບ" style="flex:1;"><button type="button" class="btn btn-secondary btn-sm" onclick="triggerCompanyDocUpload('dInvFile')" title="ອັບໂຫລດໄຟລ໌">📎</button></div></div>
       </div>
       <!-- Doc 3.3 -->
       <div class="form-row">
         <div class="form-field"><label>ໃບທະບຽນອາກອນ - ເລກທີ</label><input type="text" id="dTaxNo"></div>
         <div class="form-field"><label>ວັນທີ</label><input type="date" id="dTaxDate"></div>
-        <div class="form-field"><label>ໄຟລ (URL)</label><input type="text" id="dTaxFile" placeholder="ລິ້ງ PDF/ຮູບ"></div>
+        <div class="form-field"><label>ໄຟລ (URL/ອັບໂຫລດ)</label><div style="display:flex;gap:4px;"><input type="text" id="dTaxFile" placeholder="ລິ້ງ PDF/ຮູບ" style="flex:1;"><button type="button" class="btn btn-secondary btn-sm" onclick="triggerCompanyDocUpload('dTaxFile')" title="ອັບໂຫລດໄຟລ໌">📎</button></div></div>
       </div>
       <!-- Doc 3.4 -->
       <div class="form-row">
         <div class="form-field"><label>ໃບທະບຽນປະກັນສັງຄົມ - ເລກທີ</label><input type="text" id="dSocNo"></div>
         <div class="form-field"><label>ວັນທີ</label><input type="date" id="dSocDate"></div>
-        <div class="form-field"><label>ໄຟລ (URL)</label><input type="text" id="dSocFile" placeholder="ລິ້ງ PDF/ຮູບ"></div>
+        <div class="form-field"><label>ໄຟລ (URL/ອັບໂຫລດ)</label><div style="display:flex;gap:4px;"><input type="text" id="dSocFile" placeholder="ລິ້ງ PDF/ຮູບ" style="flex:1;"><button type="button" class="btn btn-secondary btn-sm" onclick="triggerCompanyDocUpload('dSocFile')" title="ອັບໂຫລດໄຟລ໌">📎</button></div></div>
       </div>
       <!-- Doc 3.5 (2yr) -->
       <div class="form-row">
         <div class="form-field"><label>ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ - ເລກທີ</label><input type="text" id="dRuleNo"></div>
         <div class="form-field"><label>ວັນທີ (ໝົດອາຍຸ 2 ປີ)</label><input type="date" id="dRuleDate" onchange="updateRuleStatus()"></div>
-        <div class="form-field"><label>ໄຟລ (URL)</label><input type="text" id="dRuleFile" placeholder="ລິ້ງ PDF/ຮູບ"></div>
+        <div class="form-field"><label>ໄຟລ (URL/ອັບໂຫລດ)</label><div style="display:flex;gap:4px;"><input type="text" id="dRuleFile" placeholder="ລິ້ງ PDF/ຮູບ" style="flex:1;"><button type="button" class="btn btn-secondary btn-sm" onclick="triggerCompanyDocUpload('dRuleFile')" title="ອັບໂຫລດໄຟລ໌">📎</button></div></div>
         <div class="form-field"><label>ສະຖານະ</label><input type="text" id="dRuleStatus" readonly style="background:#f5f5f5;"></div>
       </div>
       <!-- Doc 3.6 (1yr) -->
       <div class="form-row">
         <div class="form-field"><label>ໃບຢັ້ງຢືນກວດສຸຂະພາບ - ເລກທີ</label><input type="text" id="dHealthNo"></div>
         <div class="form-field"><label>ວັນທີ (ໝົດອາຍຸ 1 ປີ)</label><input type="date" id="dHealthDate" onchange="updateHealthStatus()"></div>
-        <div class="form-field"><label>ໄຟລ (URL)</label><input type="text" id="dHealthFile" placeholder="ລິ້ງ PDF/ຮູບ"></div>
+        <div class="form-field"><label>ໄຟລ (URL/ອັບໂຫລດ)</label><div style="display:flex;gap:4px;"><input type="text" id="dHealthFile" placeholder="ລິ້ງ PDF/ຮູບ" style="flex:1;"><button type="button" class="btn btn-secondary btn-sm" onclick="triggerCompanyDocUpload('dHealthFile')" title="ອັບໂຫລດໄຟລ໌">📎</button></div></div>
         <div class="form-field"><label>ສະຖານະ</label><input type="text" id="dHealthStatus" readonly style="background:#f5f5f5;"></div>
       </div>
       <!-- Extra docs -->
@@ -179,6 +179,7 @@
       <div id="extraDocsContainer"></div>
       <button class="btn btn-secondary btn-sm" onclick="addExtraDoc()" id="addExtraDocBtn">+ ເພີ້ມເອກະສານ</button>
     </div>
+    <input type="file" id="companyDocFilePicker" accept=".pdf,image/*" style="display:none;" onchange="handleCompanyDocFileSelected(event)">
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('companyModal')">ຍົກເລີກ</button>
       <button class="btn btn-primary" onclick="saveCompany()">💾 ບັນທຶກຂໍ້ມູນ</button>

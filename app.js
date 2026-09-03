@@ -960,6 +960,85 @@ function toggleDashLang() {
 
 // ຂະຫຍາຍບ່ອນທີ່ຄຣິກໃສ່ໃຫ້ເຕັມຈໍ (ສຳລັບ presentation — ຄຣິກໃສ່ບາຊາດ/ຕາຕະລາງ ຈະເຫັນສະເພາະສ່ວນນັ້ນຂະຫຍາຍໃຫຍ່)
 // ສະແດງລາຍລະອຽດແຕ່ລະບໍລິສັດພາຍໃນເຂດໜຶ່ງ (ຄຣິກຈາກຕາຕະລາງ "ແຮງງານຕາມເຂດ" ໜ້າພາບລວມ)
+// ສະແດງລາຍລະອຽດເຕັມຂອງບໍລິສັດໜຶ່ງ (ໜ້າ "ຂໍ້ມູນບໍລິສັດ") — ຂໍ້ມູນ + ເອກະສານຄັດຕິດ (ເບິ່ງ/ພິມໄດ້)
+function showCompanyDetail(id) {
+  const c = allCompanies.find(x => x.id === id);
+  if (!c) return;
+
+  const docRow = (label, no, date, file) => {
+    const url = companyDocUrl(file);
+    const viewLink = url ? `<a href="${escAttr(url)}" target="_blank" rel="noopener" style="color:#1769C2;font-weight:600;">📄 ເບິ່ງເອກະສານ</a>` : '<span style="color:#aaa;">- ບໍ່ມີໄຟລ໌ -</span>';
+    return `<tr>
+      <td style="font-weight:600;">${esc(label)}</td>
+      <td>${esc(no || '-')}</td>
+      <td>${esc(date || '-')}</td>
+      <td>${viewLink}</td>
+    </tr>`;
+  };
+
+  let docRows = '';
+  docRows += docRow('ໃບທະບຽນວິສາຫະກິດ', c.biz_reg_no, c.biz_reg_date, c.biz_reg_file);
+  docRows += docRow('ໃບອະນຸຍາດລົງທຶນ', c.invest_no, c.invest_date, c.invest_file);
+  docRows += docRow('ໃບທະບຽນອາກອນ', c.tax_no, c.tax_date, c.tax_file);
+  docRows += docRow('ໃບທະບຽນປະກັນສັງຄົມ', c.social_no, c.social_date, c.social_file);
+  docRows += docRow('ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ', c.rule_no, c.rule_date, c.rule_file);
+  docRows += docRow('ໃບຢັ້ງຢືນກວດສຸຂະພາບ', c.health_no, c.health_date, c.health_file);
+  docRows += docRow('ໃບອະນຸມັດໂຄຕ້າ', c.fw_quota_no, c.fw_quota_date, null);
+  docRows += docRow('ໃບອະນຸມັດນຳເຂົ້າແຮງງານ ຕປທ', c.fw_import_no, c.fw_import_date, null);
+  (c.extra_docs || []).forEach(d => { docRows += docRow(d.name || 'ເອກະສານອື່ນໆ', d.no, d.date, d.file); });
+
+  const overlay = document.createElement('div');
+  overlay.id = 'companyDetailOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;';
+  const closeFn = () => { overlay.remove(); document.removeEventListener('keydown', escHandler); };
+  overlay.onclick = closeFn;
+  const escHandler = (e) => { if (e.key === 'Escape') closeFn(); };
+  document.addEventListener('keydown', escHandler);
+
+  const panel = document.createElement('div');
+  panel.id = 'companyDetailPanel';
+  panel.style.cssText = 'background:#fff;border-radius:16px;width:min(780px,94vw);max-height:90vh;overflow:auto;padding:28px;position:relative;cursor:default;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.onclick = (e) => e.stopPropagation();
+  panel.innerHTML = `
+    <div style="font-size:20px;font-weight:700;color:#154360;">${esc(c.name_lao || '')}</div>
+    <div style="font-size:13px;color:#888;margin-bottom:16px;">${esc(c.name_eng || '')}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;">
+      <tr><td style="padding:6px 10px;font-weight:600;width:35%;background:#f7f9fb;">Username</td><td style="padding:6px 10px;">${esc(c.username || '-')}</td></tr>
+      <tr><td style="padding:6px 10px;font-weight:600;background:#f7f9fb;">ເຂດ</td><td style="padding:6px 10px;">ເຂດ ${esc(c.zone || '-')}</td></tr>
+      <tr><td style="padding:6px 10px;font-weight:600;background:#f7f9fb;">ສະຖານະ</td><td style="padding:6px 10px;">${c.is_active !== false ? '🟢 ດຳເນີນງານປົກກະຕິ' : '🔴 ຍົກເລີກກິດຈະການ/ຢຸດຜະລິດຊົ່ວຄາວ'}</td></tr>
+    </table>
+    <div style="font-size:15px;font-weight:700;color:#154360;margin-bottom:8px;">ເອກະສານກ່ຽວຂ້ອງ</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#1a5276;color:#fff;">
+        <th style="padding:8px;text-align:left;">ເອກະສານ</th><th style="padding:8px;text-align:left;">ເລກທີ</th><th style="padding:8px;text-align:left;">ວັນທີ</th><th style="padding:8px;text-align:left;">ໄຟລ໌</th>
+      </tr></thead>
+      <tbody>${docRows}</tbody>
+    </table>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.title = 'ປິດ (Esc)';
+  closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;background:#f1f1f1;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;line-height:1;';
+  closeBtn.onclick = closeFn;
+  const printBtn = document.createElement('button');
+  printBtn.innerHTML = '🖨️ ພິມ';
+  printBtn.className = 'btn btn-info btn-sm';
+  printBtn.style.cssText = 'position:absolute;top:10px;right:56px;';
+  printBtn.onclick = () => printCompanyDetail(panel.innerHTML, c.name_lao || '');
+  panel.appendChild(closeBtn);
+  panel.appendChild(printBtn);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+}
+
+function printCompanyDetail(html, nameLao) {
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(nameLao)}</title>
+    <style>body{font-family:'Noto Sans Lao',sans-serif;padding:24px;} table{width:100%;} button{display:none!important;}</style>
+    </head><body>${html}</body></html>`);
+  w.document.close();
+  w.onload = () => w.print();
+}
+
 function showZoneCompanies(zone) {
   const companies = Object.values(dashZoneCompanyData)
     .filter(c => c.zone === zone)
@@ -1326,7 +1405,8 @@ async function loadCompanyTable() {
   await loadCompanies();
   const tbody = document.getElementById('companyTableBody');
   if (!tbody) return;
-  tbody.innerHTML = allCompanies.map(c => {
+  const realCompanies = allCompanies.filter(c => !c.is_admin && !c.is_viewer); // ບໍ່ສະແດງບັນຊີພິເສດ (admin/viewer) — ບັນຊີເຫຼົ່ານັ້ນສະແດງຢູ່ໜ້າ "ຈັດການ Users" ແລ້ວ
+  tbody.innerHTML = realCompanies.map(c => {
     const ruleStatus = getDocStatus(c.rule_date, 2);
     const healthStatus = getDocStatus(c.health_date, 1);
     const isActive = c.is_active !== false;
@@ -1351,6 +1431,7 @@ async function loadCompanyTable() {
       </td>
       <td>${opStatus}</td>
       <td>
+        <button class="btn btn-secondary btn-sm" onclick="showCompanyDetail('${c.id}')" title="ເບິ່ງລາຍລະອຽດ">👁️</button>
         <button class="btn btn-info btn-sm" onclick="openEditCompany('${c.id}')">✏️</button>
         <button class="btn btn-warning btn-sm" onclick="openChangePassword('${c.id}','${escAttr(c.name_lao)}')">🔑</button>
         ${toggleBtn}
@@ -1518,6 +1599,36 @@ function updateHealthStatus() {
   else el.value = 'ຍັງໃຊ້ໄດ້';
 }
 
+// ອັບໂຫລດເອກະສານບໍລິສັດ (PDF/ຮູບ) ໄປ Supabase Storage bucket 'company-docs'
+function triggerCompanyDocUpload(targetFieldId) {
+  const picker = document.getElementById('companyDocFilePicker');
+  picker.dataset.target = targetFieldId;
+  picker.value = '';
+  picker.click();
+}
+
+async function handleCompanyDocFileSelected(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const targetFieldId = ev.target.dataset.target;
+  const targetInput = document.getElementById(targetFieldId);
+  if (!targetInput) return;
+  const ext = file.name.split('.').pop();
+  const path = `companydocs/${targetFieldId}_${Date.now()}.${ext}`;
+  targetInput.value = 'ກຳລັງອັບໂຫລດ...';
+  const { error } = await supabaseRetry(() => sb.storage.from('company-docs').upload(path, file, { upsert: true }));
+  if (error) { alert('ອັບໂຫລດຜິດພາດ: ' + error.message + '\n\n(ອາດຍ້ອນຍັງບໍ່ໄດ້ສ້າງ storage bucket "company-docs" — ຕິດຕໍ່ຜູ້ພັດທະນາ)'); targetInput.value = ''; return; }
+  targetInput.value = path;
+  alert('✅ ອັບໂຫລດສຳເລັດ — ກົດ "ບັນທຶກຂໍ້ມູນ" ເພື່ອບັນທຶກຄູ່ກັບບໍລິສັດ');
+}
+
+// ແປງຄ່າໃນຊ່ອງ "ໄຟລ" (path ທີ່ອັບໂຫລດ ຫຼື URL ພາຍນອກທີ່ພິມເອງ) ໃຫ້ເປັນ URL ທີ່ເປີດເບິ່ງໄດ້
+function companyDocUrl(val) {
+  if (!val) return null;
+  if (/^https?:\/\//i.test(val)) return val; // ລິ້ງພາຍນອກທີ່ພິມເອງ (ຮູບແບບເກົ່າ)
+  try { return sb.storage.from('company-docs').getPublicUrl(val).data.publicUrl; } catch(e) { return null; }
+}
+
 function addExtraDoc(data = null) {
   if (extraDocCount >= 5) { alert('ສາມາດເພີ້ມໄດ້ສູງສຸດ 5 ເອກະສານ'); return; }
   extraDocCount++;
@@ -1528,7 +1639,7 @@ function addExtraDoc(data = null) {
     <div class="form-field"><label>ຊື່ເອກະສານ ${extraDocCount}</label><input type="text" id="exName${extraDocCount}" value="${esc(data?.name || '')}"></div>
     <div class="form-field"><label>ເລກທີ</label><input type="text" id="exNo${extraDocCount}" value="${data?.no || ''}"></div>
     <div class="form-field"><label>ວັນທີ</label><input type="date" id="exDate${extraDocCount}" value="${data?.date || ''}"></div>
-    <div class="form-field"><label>ໄຟລ</label><input type="text" id="exFile${extraDocCount}" value="${data?.file || ''}"></div>
+    <div class="form-field"><label>ໄຟລ</label><div style="display:flex;gap:4px;"><input type="text" id="exFile${extraDocCount}" value="${esc(data?.file || '')}" style="flex:1;"><button type="button" class="btn btn-secondary btn-sm" onclick="triggerCompanyDocUpload('exFile${extraDocCount}')" title="ອັບໂຫລດໄຟລ໌">📎</button></div></div>
     <div class="form-field" style="justify-content:flex-end;"><button class="btn btn-danger btn-sm" onclick="removeExtraDoc(${extraDocCount})">✕</button></div>
   `;
   document.getElementById('extraDocsContainer').appendChild(div);
