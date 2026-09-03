@@ -177,9 +177,11 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;}
 }
 
 /* ---- Dashboard bilingual (LA/EN) toggle ---- */
-#dashboardLangRoot .i18n-en{display:none;}
-#dashboardLangRoot.lang-en .i18n-la{display:none;}
-#dashboardLangRoot.lang-en .i18n-en{display:inline;}
+/* default: hide English everywhere (including cloned/zoomed content, since this rule isn't ID-scoped) */
+.i18n-en{display:none;}
+/* when toggled to English (class applied to <body>, which covers both the live page and any cloned zoom overlay) */
+body.lang-en .i18n-la{display:none;}
+body.lang-en .i18n-en{display:inline;}
 
 /* ---- Dashboard zoomable cards (click-to-expand for presentations) ---- */
 [data-zoomable="1"]{cursor:zoom-in;transition:box-shadow 0.15s,transform 0.15s;}

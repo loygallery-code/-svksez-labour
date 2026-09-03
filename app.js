@@ -886,18 +886,17 @@ function pageDashboard() {
       <text x="544.75" y="70" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1f36">6160</text>
       <text x="592.75" y="257" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1f36">537</text>
       <text x="563.75" y="300" text-anchor="middle" font-size="14" fill="#374151">2025</text>
-      <!-- Latest (current) partial year — lighter blue -->
-      <rect x="717.25" y="87.73" width="50" height="192.27" rx="3" fill="#64B5F6"/>
-      <rect x="775.25" y="261.96" width="30" height="18.04" rx="2" fill="#8E24AA"/>
-      <text x="742.25" y="78" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1f36">5916</text>
-      <text x="790.25" y="256" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1f36">555</text>
+      <!-- Latest (current) partial year — lighter blue, values set live from real database totals in loadDashboard() -->
+      <rect id="dashCurLaoBar" x="717.25" y="280" width="50" height="0" rx="3" fill="#64B5F6"/>
+      <rect id="dashCurForBar" x="775.25" y="280" width="30" height="0" rx="2" fill="#8E24AA"/>
+      <text id="dashCurLaoLabel" x="742.25" y="270" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1f36">...</text>
+      <text id="dashCurForLabel" x="790.25" y="270" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1f36">...</text>
       <text id="dashLatestYearAxisLabel" x="761.25" y="300" text-anchor="middle" font-size="14" fill="#374151">...</text>
     </svg>
     <div style="display:flex;justify-content:center;align-items:center;gap:24px;margin-top:14px;">
       <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;"><span style="display:inline-block;width:12px;height:12px;background:#1E88E5;border-radius:3px;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
       <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;"><span style="display:inline-block;width:12px;height:12px;background:#8E24AA;border-radius:3px;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
     </div>
-    <div style="text-align:right;font-size:11px;color:#6b7280;margin-top:12px;">🏛️ <span class="i18n-la">ສະຖິຕິແຮງງານແຫ່ງຊາດ</span><span class="i18n-en">National Labour Statistics</span></div>
   </div>
 
   <!-- ROW 2: Zone table (full) -->
@@ -934,6 +933,7 @@ function toggleDashLang() {
   dashLang = (dashLang === 'la') ? 'en' : 'la';
   const root = document.getElementById('dashboardLangRoot');
   if (root) root.classList.toggle('lang-en', dashLang === 'en');
+  document.body.classList.toggle('lang-en', dashLang === 'en'); // ໃຫ້ box ຂະຫຍາຍ (zoom, cloned) ນອກ #dashboardLangRoot ກໍ່ຮັບການສະຫຼັບພາສານຳ
   const btn = document.getElementById('dashLangBtnLabel');
   if (btn) btn.textContent = (dashLang === 'la') ? 'EN' : 'ລາວ';
   if (typeof loadDashboard === 'function') loadDashboard(); // refresh pie chart SVG text (center label) to match new language
@@ -1023,6 +1023,36 @@ async function loadDashboard() {
   document.getElementById('dsTotalForeignM').textContent = totalForeignM;
   document.getElementById('dsTotalForeignF').textContent = totalForeignF;
   document.getElementById('dsTotal').textContent = totalLao + totalForeign;
+
+  // ອັບເດດແທ່ງບາ "ປັດຈຸບັນ" ໃນກຣາຟ "ສະຖິຕິແຮງງານຕາມປີ" ດ້ວຍຂໍ້ມູນຈິງຈາກຖານຂໍ້ມູນ (ບໍ່ໃຊ້ຕົວເລກຕາຍຕົວອີກຕໍ່ໄປ)
+  (function updateCurrentYearBar() {
+    const plotBottom = 280, plotTop = 20, maxScale = 8000;
+    const scale = (plotBottom - plotTop) / maxScale;
+    const laoBar = document.getElementById('dashCurLaoBar');
+    const forBar = document.getElementById('dashCurForBar');
+    const laoLabel = document.getElementById('dashCurLaoLabel');
+    const forLabel = document.getElementById('dashCurForLabel');
+    if (laoBar) {
+      const h = Math.max(totalLao * scale, totalLao > 0 ? 2 : 0);
+      laoBar.setAttribute('y', plotBottom - h);
+      laoBar.setAttribute('height', h);
+    }
+    if (forBar) {
+      const h = Math.max(totalForeign * scale, totalForeign > 0 ? 2 : 0);
+      forBar.setAttribute('y', plotBottom - h);
+      forBar.setAttribute('height', h);
+    }
+    if (laoLabel) {
+      const y = plotBottom - Math.max(totalLao * scale, 2) - 8;
+      laoLabel.setAttribute('y', y < 30 ? 30 : y);
+      laoLabel.textContent = totalLao;
+    }
+    if (forLabel) {
+      const y = plotBottom - Math.max(totalForeign * scale, 2) - 6;
+      forLabel.setAttribute('y', y);
+      forLabel.textContent = totalForeign;
+    }
+  })();
 
   // Zone table
   const tbody = document.getElementById('dashZoneTable');
