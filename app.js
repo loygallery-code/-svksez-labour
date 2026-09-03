@@ -396,6 +396,7 @@ function buildSidebar() {
       <li><div class="sidebar-section">ແຮງງານຕ່າງປະເທດ</div></li>
       <li><a href="#" onclick="loadPage('fwNewWorkers')"><span class="icon">🆕</span>ແຮງງານຕ່າງປະເທດເຂົ້າໃໝ່</a></li>
       <li><a href="#" onclick="loadPage('fwRenewDocs')"><span class="icon">🔄</span>ແຮງງານຕ່າງປະເທດຂໍຕໍ່ເອກະສານ</a></li>
+      <li><a href="#" onclick="loadPage('myFwRequests')"><span class="icon">📍</span>ແທຣັກກິງຄຳຮ້ອງຂອງຂ້ອຍ</a></li>
       <li><a href="#" onclick="loadPage('myFwSummary')"><span class="icon">📋</span>ສະຫຼຸບການລົງທະບຽນແຮງງານຕ່າງປະເທດ</a></li>
       <li><a href="#" onclick="loadPage('laoWorkers')"><span class="icon">🇱🇦</span>ລົງທະບຽນແຮງງານລາວ</a></li>
       <li><div class="sidebar-section">ການເຄື່ອນໄຫວແຮງງານ</div></li>
@@ -653,8 +654,23 @@ async function checkNotifications() {
             type: 'success',
             key,
             msg: `✅ ຄຳຂໍ${r.request_type === 'new' ? 'ລົງທະບຽນແຮງງານ ຕປທ ໃໝ່' : 'ຕໍ່ອາຍຸເອກະສານແຮງງານ ຕປທ'} ຂອງທ່ານ ຖືກແອັດມິນກວດເອກະສານຄົບຖ້ວນແລ້ວ`,
-            page: 'fwRequestCompany'
+            page: 'myFwRequests'
           });
+        }
+      });
+    }
+    // ແຈ້ງເຕືອນເມື່ອອະນຸມັດຂັ້ນສຸດທ້າຍ ຫຼື ຖືກປະຕິເສດ
+    const { data: finalReqs } = await sb.from('fw_requests').select('id,request_type,final_approved,rejected,rejected_reason').eq('company_id', currentUser.companyId).or('final_approved.eq.true,rejected.eq.true');
+    if (finalReqs) {
+      const seenFinal = new Set(JSON.parse(sessionStorage.getItem('seenDocExpiry') || '[]'));
+      finalReqs.forEach(r => {
+        const label = r.request_type === 'new' ? 'ລົງທະບຽນແຮງງານ ຕປທ ໃໝ່' : 'ຕໍ່ອາຍຸເອກະສານແຮງງານ ຕປທ';
+        if (r.final_approved) {
+          const key = `fwfin_${r.id}`;
+          if (!seenFinal.has(key)) notifications.push({ type: 'success', key, msg: `🏁 ຄຳຂໍ${label} ຂອງທ່ານ ໄດ້ຮັບການອະນຸມັດຂັ້ນສຸດທ້າຍແລ້ວ`, page: 'myFwRequests' });
+        } else if (r.rejected) {
+          const key = `fwrej_${r.id}`;
+          if (!seenFinal.has(key)) notifications.push({ type: 'danger', key, msg: `❌ ຄຳຂໍ${label} ຂອງທ່ານ ຖືກປະຕິເສດ${r.rejected_reason ? ' — ' + esc(r.rejected_reason) : ''}`, page: 'myFwRequests' });
         }
       });
     }
@@ -757,6 +773,7 @@ function loadPage(page, pushState=true) {
     case 'fwNewWorkers':   content.innerHTML = pageFwNewWorkers();  loadFwNewWorkers();  break;
     case 'fwRenewDocs':    content.innerHTML = pageFwRenewDocs();   loadFwRenewDocs();   break;
     case 'fwRequestCompany': loadPage('fwNewWorkers', pushState); return; // redirect legacy
+    case 'myFwRequests': content.innerHTML = pageMyFwRequests(); loadMyFwRequests(); break;
     case 'myFwSummary': content.innerHTML = pageMyFwSummary(); loadMyFwSummary(); break;
     case 'laoWorkers': content.innerHTML = pageLaoWorkers(); loadLaoWorkers(); break;
     case 'fwRequestsAdmin': content.innerHTML = pageFwRequestsAdmin(); loadFwRequestsAdmin(); sessionStorage.setItem('seenFwReqAt', Date.now()); setTimeout(checkNotifications, 500); break;
@@ -1640,6 +1657,45 @@ function companyDocUrl(val) {
   if (!val) return null;
   if (/^https?:\/\//i.test(val)) return val; // ລິ້ງພາຍນອກທີ່ພິມເອງ (ຮູບແບບເກົ່າ)
   try { return sb.storage.from('company-docs').getPublicUrl(val).data.publicUrl; } catch(e) { return null; }
+}
+
+// ລະບົບແທຣັກກິງເອກະສານ — ໃຊ້ຮ່ວມກັນທັງ FN (ຂໍເຂົ້າໃໝ່) ແລະ FNR (ຂໍຕໍ່ບັດ)
+// ຂັ້ນຕອນ: 1) ສົ່ງຄຳຮ້ອງ → 2) ແອັດມິນກວດເອກະສານ → 3) ອະນຸມັດຂັ້ນສຸດທ້າຍ (ຫຼື ❌ ຖືກປະຕິເສດ)
+function buildFwTrackerHtml(r) {
+  const step1Done = true; // ມີ record ແປວ່າສົ່ງຄຳຮ້ອງແລ້ວສະເໝີ
+  const step2Done = r.status === 'reviewed' || r.final_approved;
+  const step3Done = !!r.final_approved;
+  const isRejected = !!r.rejected;
+
+  const stepHtml = (label, done, active, dateStr) => `
+    <div style="display:flex;flex-direction:column;align-items:center;flex:1;position:relative;">
+      <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+        background:${done ? '#2e9d67' : active ? '#f39c12' : '#dcdfe3'};color:${done||active?'#fff':'#888'};">
+        ${done ? '✓' : active ? '⏳' : ''}
+      </div>
+      <div style="font-size:11px;text-align:center;margin-top:4px;color:${done?'#2e9d67':active?'#e67e22':'#999'};font-weight:${done||active?'700':'400'};max-width:90px;">${label}</div>
+      ${dateStr ? `<div style="font-size:9px;color:#aaa;margin-top:1px;">${dateStr}</div>` : ''}
+    </div>`;
+  const lineHtml = (done) => `<div style="flex:0.5;height:3px;background:${done ? '#2e9d67' : '#dcdfe3'};margin-top:15px;"></div>`;
+
+  if (isRejected) {
+    return `
+    <div style="background:#fdecea;border:1px solid #e74c3c;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#c0392b;">❌ ຄຳຮ້ອງນີ້ຖືກປະຕິເສດ</div>
+      ${r.rejected_reason ? `<div style="font-size:12px;color:#922b21;margin-top:4px;">ເຫດຜົນ: ${esc(r.rejected_reason)}</div>` : ''}
+    </div>`;
+  }
+
+  return `
+    <div style="background:#fff;border:1px solid #e1e8f0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+      <div style="display:flex;align-items:flex-start;">
+        ${stepHtml('ສົ່ງຄຳຮ້ອງ', step1Done, false, laoDate(r.created_at))}
+        ${lineHtml(step2Done)}
+        ${stepHtml('ແອັດມິນກວດເອກະສານ', step2Done, !step2Done, r.reviewed_at ? laoDate(r.reviewed_at) : '')}
+        ${lineHtml(step3Done)}
+        ${stepHtml('ອະນຸມັດຂັ້ນສຸດທ້າຍ', step3Done, step2Done && !step3Done, r.final_approved_at ? laoDate(r.final_approved_at) : '')}
+      </div>
+    </div>`;
 }
 
 function addExtraDoc(data = null) {
@@ -7204,7 +7260,37 @@ function notifyAdminFwRequest() {
   document.getElementById('fwLetterPanel').style.display = 'none';
 }
 
-// ---- ADMIN: Inbox of foreign-worker requests submitted by companies ----
+// ---- COMPANY: ແທຣັກກິງຄຳຮ້ອງຂອງຂ້ອຍ (FN + FNR) — ຕັ້ງແຕ່ສ້າງໃບສະເໜີ ຈົນຮອດການອະນຸມັດຂັ້ນສຸດທ້າຍ ----
+function pageMyFwRequests() {
+  return `
+  <div class="card">
+    <div class="card-header" style="background:linear-gradient(135deg,#0f2942,#1a5276);border-radius:12px 12px 0 0;border-bottom:none;">
+      <span class="card-title" style="color:#fff;">📍 ແທຣັກກິງຄຳຮ້ອງຂອງຂ້ອຍ<br><span style="font-size:11px;color:#cfe0ec;font-weight:400;">Request Tracking — FN &amp; FNR</span></span>
+    </div>
+    <div class="card-body">
+      <div id="myFwRequestsList"><div style="text-align:center;color:#aaa;padding:20px;">ກຳລັງໂຫຼດ...</div></div>
+    </div>
+  </div>`;
+}
+
+async function loadMyFwRequests() {
+  const el = document.getElementById('myFwRequestsList');
+  if (!el) return;
+  const { data, error } = await sb.from('fw_requests').select('*').eq('company_id', currentUser.companyId).order('created_at', { ascending: false });
+  if (error) { el.innerHTML = `<div class="alert alert-danger">❌ ${error.message}</div>`; return; }
+  if (!data || data.length === 0) { el.innerHTML = '<div style="text-align:center;color:#aaa;padding:30px;">ທ່ານຍັງບໍ່ໄດ້ສົ່ງຄຳຂໍໃດເທື່ອ</div>'; return; }
+
+  el.innerHTML = data.map(r => `
+    <div style="border:1px solid #e1e8f0;border-radius:12px;padding:16px 18px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:14px;font-weight:700;color:#154360;">${r.request_type === 'new' ? '🆕 ລົງທະບຽນແຮງງານ ຕປທ ໃໝ່' : '🔄 ຕໍ່ອາຍຸເອກະສານແຮງງານ ຕປທ'} — ${r.male_count||0} ຊາຍ / ${r.female_count||0} ຍິງ</div>
+        <div style="font-size:11px;color:#888;">${laoDate(r.created_at)}</div>
+      </div>
+      ${buildFwTrackerHtml(r)}
+    </div>`).join('');
+}
+
+
 function pageFwRequestsAdmin() {
   return `
   <div class="card">
@@ -7242,7 +7328,7 @@ async function loadFwRequestsAdmin() {
       <td>${esc(r.companies?.username || '-')} — ${esc(r.companies?.name_lao || '')}</td>
       <td>${r.request_type === 'new' ? '🆕 ລົງທະບຽນໃໝ່' : '🔄 ຕໍ່ອາຍຸ'}</td>
       <td>${r.male_count || 0} / ${r.female_count || 0}</td>
-      <td>${r.status === 'reviewed' ? '<span class="status-ok">✅ ກວດແລ້ວ</span>' : '<span style="color:#e67e22;">📥 ໃໝ່</span>'}</td>
+      <td>${r.rejected ? '<span style="color:#c0392b;">❌ ປະຕິເສດ</span>' : r.final_approved ? '<span class="status-ok">🏁 ອະນຸມັດແລ້ວ</span>' : r.status === 'reviewed' ? '<span style="color:#1769C2;">✅ ກວດແລ້ວ</span>' : '<span style="color:#e67e22;">📥 ໃໝ່</span>'}</td>
       <td>
         <button class="btn btn-info btn-sm" onclick="viewFwRequest('${r.id}')">🔍 ເບິ່ງ</button>
         ${r.status !== 'reviewed' ? `<button class="btn btn-success btn-sm" onclick="markFwRequestReviewed('${r.id}')">✅ ກວດແລ້ວ</button>` : ''}
@@ -7301,8 +7387,41 @@ async function viewFwRequest(id) {
       </div>
     </div>`;
 
-  document.getElementById('fwReqViewBody').innerHTML = docsHtml + companyDocsHtml + buildFwRequestLetterHtml(r);
+  const finalActionsHtml = `
+    <div style="background:#fff;border:1px solid #e1e8f0;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#154360;margin-bottom:8px;">🏁 ຂັ້ນຕອນສຸດທ້າຍ</div>
+      ${r.final_approved
+        ? `<div style="font-size:13px;color:#2e9d67;font-weight:600;">✅ ອະນຸມັດຂັ້ນສຸດທ້າຍແລ້ວ ${r.final_approved_at ? '(' + laoDate(r.final_approved_at) + ')' : ''}</div>`
+        : r.rejected
+        ? `<div style="font-size:13px;color:#c0392b;font-weight:600;">❌ ຖືກປະຕິເສດແລ້ວ</div>`
+        : r.status === 'reviewed'
+        ? `<div style="display:flex;gap:8px;">
+             <button class="btn btn-success btn-sm" onclick="finalApproveFwRequest('${id}')">✅ ອະນຸມັດຂັ້ນສຸດທ້າຍ</button>
+             <button class="btn btn-danger btn-sm" onclick="rejectFwRequest('${id}')">❌ ປະຕິເສດ</button>
+           </div>`
+        : `<div style="font-size:12px;color:#aaa;">ຕ້ອງກວດເອກະສານໃຫ້ຄົບ 3 ຂໍ້ຂ້າງເທິງກ່ອນ ຈຶ່ງຈະອະນຸມັດຂັ້ນສຸດທ້າຍໄດ້</div>`}
+    </div>`;
+
+  document.getElementById('fwReqViewBody').innerHTML = buildFwTrackerHtml(r) + docsHtml + companyDocsHtml + finalActionsHtml + buildFwRequestLetterHtml(r);
   document.getElementById('fwReqViewModal').classList.add('show');
+}
+
+// ອະນຸມັດຂັ້ນສຸດທ້າຍ — ຂັ້ນຕອນສຸດທ້າຍຂອງລະບົບແທຣັກກິງ, ແຈ້ງເຕືອນໄປຫາບໍລິສັດ
+async function finalApproveFwRequest(id) {
+  if (!confirm('ຢືນຢັນອະນຸມັດຂັ້ນສຸດທ້າຍ? ບໍລິສັດຈະໄດ້ຮັບການແຈ້ງເຕືອນທັນທີ')) return;
+  const { error } = await sb.from('fw_requests').update({ final_approved: true, final_approved_at: new Date().toISOString() }).eq('id', id);
+  if (error) { alert('ຜິດພາດ: ' + error.message); return; }
+  viewFwRequest(id);
+  loadFwRequestsAdmin();
+}
+
+async function rejectFwRequest(id) {
+  const reason = prompt('ເຫດຜົນການປະຕິເສດ (ຈະສະແດງໃຫ້ບໍລິສັດເຫັນ):');
+  if (reason === null) return; // ຍົກເລີກ
+  const { error } = await sb.from('fw_requests').update({ rejected: true, rejected_reason: reason || null }).eq('id', id);
+  if (error) { alert('ຜິດພາດ: ' + error.message); return; }
+  viewFwRequest(id);
+  loadFwRequestsAdmin();
 }
 
 // ອັບເດດເຊັກລິດການກວດເອກະສານ — ຖ້າກາຄົບທັງ 3 ຂໍ້ ຈະປ່ຽນສະຖານະເປັນ "ກວດແລ້ວ" ອັດຕະໂນມັດ ແລະ ແຈ້ງເຕືອນໄປຫາບໍລິສັດ (ຜ່ານລະບົບແຈ້ງເຕືອນ 🔔 ຝັ່ງບໍລິສັດ)
