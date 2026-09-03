@@ -791,6 +791,23 @@ function pageDashboard() {
           <div style="font-size:8px;color:#1e88e5;font-weight:600;">✔️ <span class="i18n-la">ຢືນຢັນຂໍ້ມູນ</span><span class="i18n-en">Verified</span></div>
         </div>
         <svg viewBox="0 0 330 170" style="width:100%;height:118px;display:block;margin-top:2px;">
+          <defs>
+            <linearGradient id="gradLaoDark" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#8ED0F0"/>
+              <stop offset="45%" stop-color="#1E88E5"/>
+              <stop offset="100%" stop-color="#0D47A1"/>
+            </linearGradient>
+            <linearGradient id="gradLaoLight" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#BFE3FA"/>
+              <stop offset="45%" stop-color="#64B5F6"/>
+              <stop offset="100%" stop-color="#1E88E5"/>
+            </linearGradient>
+            <linearGradient id="gradForeign" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#D9A9E6"/>
+              <stop offset="45%" stop-color="#9C27B0"/>
+              <stop offset="100%" stop-color="#5E1268"/>
+            </linearGradient>
+          </defs>
           <line x1="40" y1="8" x2="40" y2="130" stroke="#E5E7EB" stroke-width="1"/>
           <line x1="40" y1="130" x2="320" y2="130" stroke="#9aa3af" stroke-width="1"/>
           <line x1="40" y1="99.5" x2="320" y2="99.5" stroke="#E5E7EB" stroke-width="1"/>
@@ -802,33 +819,33 @@ function pageDashboard() {
           <text x="36" y="41.5" text-anchor="end" font-size="6" fill="#888">6k</text>
           <text x="36" y="12" text-anchor="end" font-size="6" fill="#888">8k</text>
           <!-- 2023 -->
-          <rect x="61" y="65.8" width="16" height="64.2" rx="2" fill="#1E88E5"/>
-          <rect x="80" y="126.1" width="9" height="3.9" rx="1" fill="#8E24AA"/>
+          <rect x="61" y="65.8" width="16" height="64.2" rx="2" fill="url(#gradLaoDark)"/>
+          <rect x="80" y="126.1" width="9" height="3.9" rx="1" fill="url(#gradForeign)"/>
           <text x="69" y="62" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">4208</text>
           <text x="84.5" y="123" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">253</text>
           <text x="75" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2023</text>
           <!-- 2024 -->
-          <rect x="131" y="47" width="16" height="83" rx="2" fill="#1E88E5"/>
-          <rect x="150" y="122.5" width="9" height="7.5" rx="1" fill="#8E24AA"/>
+          <rect x="131" y="47" width="16" height="83" rx="2" fill="url(#gradLaoDark)"/>
+          <rect x="150" y="122.5" width="9" height="7.5" rx="1" fill="url(#gradForeign)"/>
           <text x="139" y="43" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">5441</text>
           <text x="154.5" y="119.5" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">493</text>
           <text x="145" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2024</text>
           <!-- 2025 -->
-          <rect x="201" y="36" width="16" height="94" rx="2" fill="#1E88E5"/>
-          <rect x="220" y="121.8" width="9" height="8.2" rx="1" fill="#8E24AA"/>
+          <rect x="201" y="36" width="16" height="94" rx="2" fill="url(#gradLaoDark)"/>
+          <rect x="220" y="121.8" width="9" height="8.2" rx="1" fill="url(#gradForeign)"/>
           <text x="209" y="32" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">6160</text>
           <text x="224.5" y="118.8" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">537</text>
           <text x="215" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2025</text>
           <!-- Latest (current) partial year — lighter blue, values set live from real database totals in loadDashboard() -->
-          <rect id="dashCurLaoBar" x="271" y="130" width="16" height="0" rx="2" fill="#64B5F6"/>
-          <rect id="dashCurForBar" x="290" y="130" width="9" height="0" rx="1" fill="#8E24AA"/>
+          <rect id="dashCurLaoBar" x="271" y="130" width="16" height="0" rx="2" fill="url(#gradLaoLight)"/>
+          <rect id="dashCurForBar" x="290" y="130" width="9" height="0" rx="1" fill="url(#gradForeign)"/>
           <text id="dashCurLaoLabel" x="279" y="122" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">...</text>
           <text id="dashCurForLabel" x="294.5" y="122" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">...</text>
           <text id="dashLatestYearAxisLabel" x="285" y="140" text-anchor="middle" font-size="6.5" fill="#374151">...</text>
         </svg>
         <div style="display:flex;justify-content:center;gap:12px;margin-top:1px;font-size:7px;color:#374151;">
-          <span><span style="display:inline-block;width:7px;height:7px;background:#1E88E5;border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
-          <span><span style="display:inline-block;width:7px;height:7px;background:#8E24AA;border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
+          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#8ED0F0,#1E88E5,#0D47A1);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
+          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#D9A9E6,#9C27B0,#5E1268);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
         </div>
       </div>
     </div>
@@ -945,7 +962,7 @@ function expandDashCard(el, ev) {
   panel.style.cssText = 'background:#fff;border-radius:16px;width:95vw;max-width:1700px;height:90vh;overflow:auto;padding:32px;position:relative;cursor:default;box-shadow:0 20px 60px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;';
   panel.onclick = (e) => e.stopPropagation();
   const scaleWrap = document.createElement('div');
-  scaleWrap.style.cssText = 'transform:scale(2.3);transform-origin:center center;';
+  scaleWrap.style.cssText = 'transform:scale(1);transform-origin:center center;';
   scaleWrap.innerHTML = el.innerHTML;
   panel.appendChild(scaleWrap);
   const closeFn = () => {
@@ -962,6 +979,16 @@ function expandDashCard(el, ev) {
   panel.appendChild(closeBtn);
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
+  // ຄິດໄລ່ອັດຕາການຂະຫຍາຍໃຫ້ພໍດີກັບພື້ນທີ່ box ອັດຕະໂນມັດ (ບໍ່ໃຫ້ຫວ່າງເກີນໄປ ຫຼືລົ້ນອອກນອກ box)
+  requestAnimationFrame(() => {
+    const rect = scaleWrap.getBoundingClientRect();
+    const availW = panel.clientWidth - 64;
+    const availH = panel.clientHeight - 64;
+    if (rect.width > 0 && rect.height > 0) {
+      const scale = Math.min(availW / rect.width, availH / rect.height, 4.5);
+      scaleWrap.style.transform = `scale(${scale})`;
+    }
+  });
 }
 
 async function loadDashboard() {
