@@ -6998,7 +6998,7 @@ function printFwRequestLetter() {
   </div>
   <div style="height:10px;"></div>
   <div style="text-indent:4em;text-align:justify;font-size:12pt;margin:6px 0;line-height:1.8;">
-    ຂ້າພະເຈົ້າໃນນາມຜູ້ອຳນວຍການບໍລິສັດ ${esc(co.name_lao||'...........................................')} ມີຈຸດປະສົງຮຽນສະເໜີມາຍັງທ່ານ${doc1Action}ສັນຊາດ ${mainNat||'...'} ເພື່ອ${isNew?'ມາປະຕິບັດໜ້າທີ່ຕາມຕຳແໜ່ງ':'ຕໍ່ອາຍຸເອກະສານ'} ຈຳນວນ ${totalCount} ຄົນ (ຊາຍ ${maleCount} ຄົນ, ຍິງ ${femaleCount} ຄົນ) ຊຶ່ງແຮງງານທັງໝົດນີ້ ຈະຢູ່ໃນຄວາມຄຸ້ມຄອງ ຂອງ ບໍລິສັດ ${stayText}.
+    ຂ້າພະເຈົ້າໃນນາມຜູ້ອຳນວຍການບໍລິສັດ ${esc(co.name_lao||'...........................................')} ມີຈຸດປະສົງຮຽນສະເໜີມາຍັງທ່ານ${doc1Action}ສັນຊາດ ${mainNat||'...'}${isNew?'':' ເພື່ອຕໍ່ອາຍຸເອກະສານ'} ຈຳນວນ ${totalCount} ຄົນ (ຊາຍ ${maleCount} ຄົນ, ຍິງ ${femaleCount} ຄົນ) ຊຶ່ງແຮງງານທັງໝົດນີ້ ຈະຢູ່ໃນຄວາມຄຸ້ມຄອງ ຂອງ ບໍລິສັດ ${stayText}.
   </div>
   <div style="height:8px;"></div>
   <div style="text-indent:4em;text-align:justify;font-size:12pt;margin:6px 0;line-height:1.8;">
