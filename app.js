@@ -4046,6 +4046,12 @@ function fwPhotoBoxHtml(fileInputId, previewId, currentPhotoUrl) {
 function fnPrefixOptions() { return ['MR','MRS','MISS','MS'].map(p => `<option value="${p}">${p}</option>`).join(''); }
 function fwGenderOptions() { return ['ຊາຍ','ຍິງ'].map(g => `<option value="${g}">${g}</option>`).join(''); }
 function fwStayOptions() { return [1,3,6,12].map(m => `<option value="${m}">${m} ເດືອນ</option>`).join(''); }
+// ຈຳກັດ "ກຳນົດຢູ່" ສູງສຸດ 12 ເດືອນ (ຄືກັນກັບ dropdown ການລົງທະບຽນທີລະຄົນ) — ໃຊ້ຕອນອ່ານຄ່າຈາກ Excel bulk upload ເພື່ອບໍ່ໃຫ້ຄ່າເກີນຫຼຸດຜ່ານໄດ້
+function capStayDuration(v) {
+  const n = parseInt(v);
+  if (!n || isNaN(n)) return null;
+  return n > 12 ? 12 : n;
+}
 
 function toggleNatCustom(selectId, customId) {
   const sel = document.getElementById(selectId);
@@ -5175,7 +5181,7 @@ async function handleFnrBulkExcel(file) {
         labour_card_no: r[6] || '', labour_card_issue: excelDate(r[7]), labour_card_expiry: excelDate(r[8]),
         residence_card_no: r[9] || '', residence_card_issue: excelDate(r[10]), residence_card_expiry: excelDate(r[11]),
         visa_no: r[12] || '', visa_issue: excelDate(r[13]), visa_expiry: excelDate(r[14]),
-        stay_duration: parseInt(r[15]) || null,
+        stay_duration: capStayDuration(r[15]),
       });
     }
     if (!inserts.length) { alert('ບໍ່ພົບຂໍ້ມູນທີ່ຖືກຕ້ອງ ຫຼືຫາຄົນບໍ່ພົບໃນລະບົບ'); return; }
@@ -5361,7 +5367,7 @@ async function handleFnNewBulkExcel(file) {
       salary: parseFloat(r[6])||null, dob: excelDate(r[7]),
       passport_no: r[8]||'', passport_issue: excelDate(r[9]), passport_expiry: excelDate(r[10]),
       labour_card_no: r[11]||'', labour_card_issue: excelDate(r[12]), labour_card_expiry: excelDate(r[13]),
-      stay_duration: parseInt(r[14])||null,
+      stay_duration: capStayDuration(r[14]),
       residence_card_no: r[15]||'', residence_card_issue: excelDate(r[16]), residence_card_expiry: excelDate(r[17]),
       visa_no: r[18]||'', visa_issue: excelDate(r[19]), visa_expiry: excelDate(r[20]),
       start_date: excelDate(r[21]),
@@ -5515,7 +5521,7 @@ async function handleFnBulkExcel(file) {
       salary: parseFloat(r[6])||null, dob: excelDate(r[7]),
       passport_no: r[8]||'', passport_issue: excelDate(r[9]), passport_expiry: excelDate(r[10]),
       labour_card_no: r[11]||'', labour_card_issue: excelDate(r[12]), labour_card_expiry: excelDate(r[13]),
-      stay_duration: parseInt(r[14])||null,
+      stay_duration: capStayDuration(r[14]),
       residence_card_no: r[15]||'', residence_card_issue: excelDate(r[16]), residence_card_expiry: excelDate(r[17]),
       visa_no: r[18]||'', visa_issue: excelDate(r[19]), visa_expiry: excelDate(r[20]),
       start_date: excelDate(r[21]),
@@ -6944,7 +6950,9 @@ function printFwRequestLetter() {
   const maleCount   = workers.filter(w => w.gender !== 'ຍິງ').length;
   const femaleCount = workers.filter(w => w.gender === 'ຍິງ').length;
   const totalCount  = workers.length;
-  const mainNat = (workers[0]?.nationality || '');
+  // ຮອງຮັບຫຼາຍສັນຊາດ — ບໍ່ໃຊ້ພຽງແຕ່ສັນຊາດຂອງຄົນທຳອິດ, ໃຫ້ລວມທຸກສັນຊາດທີ່ມີໃນລາຍຊື່ (ຄັ່ນດ້ວຍ "ແລະ")
+  const distinctNats = [...new Set(workers.map(w => w.nationality).filter(Boolean))];
+  const mainNat = distinctNats.join(' ແລະ ');
 
   // Dynamic stay duration
   const durations = [...new Set(workers.map(w => w.stay_duration).filter(Boolean))];
