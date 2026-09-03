@@ -942,9 +942,12 @@ function expandDashCard(el, ev) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;';
   overlay.onclick = () => closeFn();
   const panel = document.createElement('div');
-  panel.style.cssText = 'background:#fff;border-radius:16px;max-width:min(96vw,900px);max-height:92vh;overflow:auto;padding:24px;position:relative;cursor:default;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.style.cssText = 'background:#fff;border-radius:16px;width:95vw;max-width:1700px;height:90vh;overflow:auto;padding:32px;position:relative;cursor:default;box-shadow:0 20px 60px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;';
   panel.onclick = (e) => e.stopPropagation();
-  panel.innerHTML = el.innerHTML;
+  const scaleWrap = document.createElement('div');
+  scaleWrap.style.cssText = 'transform:scale(2.3);transform-origin:center center;';
+  scaleWrap.innerHTML = el.innerHTML;
+  panel.appendChild(scaleWrap);
   const closeFn = () => {
     overlay.remove();
     document.removeEventListener('keydown', escHandler);
