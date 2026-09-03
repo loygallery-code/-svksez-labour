@@ -641,6 +641,25 @@ async function checkNotifications() {
     });
   }
 
+  // ---- Company-side: ແຈ້ງເຕືອນເມື່ອແອັດມິນກວດເອກະສານຄຳຮ້ອງ (ໃບໂຄຕ້າ/ໃບອາກອນ/ລາຍຊື່ພະນັກງານ) ຄົບຖ້ວນແລ້ວ ----
+  if (currentUser.role === 'company') {
+    const { data: reviewedReqs } = await sb.from('fw_requests').select('id,request_type,reviewed_at').eq('company_id', currentUser.companyId).eq('status', 'reviewed');
+    if (reviewedReqs) {
+      const seenReviewed = new Set(JSON.parse(sessionStorage.getItem('seenDocExpiry') || '[]')); // ໃຊ້ storage ດຽວກັນກັບປຸ່ມ "ຮັບຊາບ" ທົ່ວໄປ
+      reviewedReqs.forEach(r => {
+        const key = `fwrev_${r.id}`;
+        if (!seenReviewed.has(key)) {
+          notifications.push({
+            type: 'success',
+            key,
+            msg: `✅ ຄຳຂໍ${r.request_type === 'new' ? 'ລົງທະບຽນແຮງງານ ຕປທ ໃໝ່' : 'ຕໍ່ອາຍຸເອກະສານແຮງງານ ຕປທ'} ຂອງທ່ານ ຖືກແອັດມິນກວດເອກະສານຄົບຖ້ວນແລ້ວ`,
+            page: 'fwRequestCompany'
+          });
+        }
+      });
+    }
+  }
+
   const badge = document.getElementById('notifCount');
   if (notifications.length > 0) {
     badge.style.display = 'inline-flex';
@@ -7236,12 +7255,78 @@ async function viewFwRequest(id) {
   const { data: r, error } = await sb.from('fw_requests').select('*, companies(*)').eq('id', id).single();
   if (error || !r) { alert('ບໍ່ພົບຂໍ້ມູນ'); return; }
   window._currentFwRequestId = id;
-  document.getElementById('fwReqViewBody').innerHTML = buildFwRequestLetterHtml(r);
+
+  const quotaUrl = companyDocUrl(r.quota_file);
+  const taxUrl = companyDocUrl(r.tax_cert_file);
+  const co = r.companies || {};
+  // ເອກະສານປະຈຳບໍລິສັດ (ຕັ້ງແຕ່ຕອນເພີ່ມຂໍ້ມູນບໍລິສັດເຂົ້າລະບົບ) — ຕິກອັດຕະໂນມັດຖ້າມີຂໍ້ມູນນັ້ນຢູ່ໃນໂປຣໄຟລ໌ບໍລິສັດແລ້ວ (ອ່ານຢ່າງດຽວ, ບໍ່ນັບເຂົ້າເງື່ອນໄຂ "ກວດແລ້ວ" ຂອງຄຳຮ້ອງນີ້)
+  const companyDocChecklist = [
+    ['ໃບທະບຽນວິສາຫະກິດ', !!(co.biz_reg_no || co.biz_reg_file)],
+    ['ໃບອະນຸຍາດລົງທຶນ', !!(co.invest_no || co.invest_file)],
+    ['ໃບທະບຽນອາກອນ', !!(co.tax_no || co.tax_file)],
+    ['ໃບທະບຽນປະກັນສັງຄົມ', !!(co.social_no || co.social_file)],
+    ['ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ', !!(co.rule_no || co.rule_file)],
+  ];
+  const companyDocsHtml = `
+    <div style="background:#fff;border:1px solid #e1e8f0;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#154360;margin-bottom:8px;">🏢 ເອກະສານປະຈຳບໍລິສັດ (ອ້າງອີງຈາກໂປຣໄຟລ໌ບໍລິສັດ)</div>
+      ${companyDocChecklist.map(([label, has]) => `
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;color:${has?'#333':'#aaa'};">
+        <input type="checkbox" disabled ${has ? 'checked' : ''}> ${label} ${has ? '' : '<span style="font-size:11px;">(ຍັງບໍ່ໄດ້ຕື່ມໃນໂປຣໄຟລ໌ບໍລິສັດ)</span>'}
+      </label>`).join('')}
+    </div>`;
+  const docsHtml = `
+    <div style="background:#f7f9fb;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#154360;margin-bottom:8px;">📎 ເອກະສານຄັດຕິດ (ຈາກບໍລິສັດ)</div>
+      <div style="font-size:13px;margin-bottom:6px;">
+        ${quotaUrl ? `<a href="${escAttr(quotaUrl)}" target="_blank" rel="noopener" style="color:#1769C2;font-weight:600;">📄 ໃບອະນຸຍາດໂຄຕ້າ (ເລກທີ ${esc(r.quota_no||'-')})</a>` : '<span style="color:#aaa;">- ບໍ່ມີໄຟລ໌ໃບໂຄຕ້າ -</span>'}
+      </div>
+      <div style="font-size:13px;">
+        ${taxUrl ? `<a href="${escAttr(taxUrl)}" target="_blank" rel="noopener" style="color:#1769C2;font-weight:600;">📄 ໃບແຈ້ງເສຍອາກອນປະຈຳປີ (ເລກທີ ${esc(r.tax_cert_no||'-')})</a>` : '<span style="color:#aaa;">- ບໍ່ມີໄຟລ໌ໃບອາກອນ -</span>'}
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #e1e8f0;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#154360;margin-bottom:8px;">✅ ເຊັກລິດການກວດເອກະສານ</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;cursor:pointer;">
+        <input type="checkbox" id="fwCheckWorkers" ${r.checked_workers ? 'checked' : ''} onchange="updateFwRequestChecklist('${id}','checked_workers',this.checked)"> ກວດຂໍ້ມູນ/ບັນຊີລາຍຊື່ພະນັກງານແລ້ວ
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;cursor:pointer;">
+        <input type="checkbox" id="fwCheckQuota" ${r.checked_quota ? 'checked' : ''} onchange="updateFwRequestChecklist('${id}','checked_quota',this.checked)"> ກວດໃບອະນຸຍາດໂຄຕ້າແລ້ວ
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="fwCheckTax" ${r.checked_tax ? 'checked' : ''} onchange="updateFwRequestChecklist('${id}','checked_tax',this.checked)"> ກວດໃບແຈ້ງເສຍອາກອນປະຈຳປີແລ້ວ
+      </label>
+      <div id="fwCheckStatus" style="font-size:12px;margin-top:10px;color:${r.status==='reviewed'?'#2e9d67':'#e67e22'};font-weight:600;">
+        ${r.status === 'reviewed' ? '✅ ກວດຄົບຖ້ວນແລ້ວ — ບໍລິສັດຈະໄດ້ຮັບການແຈ້ງເຕືອນ' : '📥 ຍັງກວດບໍ່ຄົບ — ຕ້ອງກາຄົບທັງ 3 ຂໍ້ ຈຶ່ງຈະແຈ້ງເຕືອນໄປຫາບໍລິສັດ'}
+      </div>
+    </div>`;
+
+  document.getElementById('fwReqViewBody').innerHTML = docsHtml + companyDocsHtml + buildFwRequestLetterHtml(r);
   document.getElementById('fwReqViewModal').classList.add('show');
 }
 
+// ອັບເດດເຊັກລິດການກວດເອກະສານ — ຖ້າກາຄົບທັງ 3 ຂໍ້ ຈະປ່ຽນສະຖານະເປັນ "ກວດແລ້ວ" ອັດຕະໂນມັດ ແລະ ແຈ້ງເຕືອນໄປຫາບໍລິສັດ (ຜ່ານລະບົບແຈ້ງເຕືອນ 🔔 ຝັ່ງບໍລິສັດ)
+async function updateFwRequestChecklist(id, field, value) {
+  const { error } = await sb.from('fw_requests').update({ [field]: value }).eq('id', id);
+  if (error) { alert('ຜິດພາດ: ' + error.message); return; }
+  const { data: r } = await sb.from('fw_requests').select('checked_workers,checked_quota,checked_tax,status').eq('id', id).single();
+  if (!r) return;
+  const allChecked = r.checked_workers && r.checked_quota && r.checked_tax;
+  const statusEl = document.getElementById('fwCheckStatus');
+  if (allChecked && r.status !== 'reviewed') {
+    await sb.from('fw_requests').update({ status: 'reviewed', reviewed_at: new Date().toISOString() }).eq('id', id);
+    if (statusEl) { statusEl.textContent = '✅ ກວດຄົບຖ້ວນແລ້ວ — ບໍລິສັດຈະໄດ້ຮັບການແຈ້ງເຕືອນ'; statusEl.style.color = '#2e9d67'; }
+    loadFwRequestsAdmin();
+  } else if (!allChecked && r.status === 'reviewed') {
+    // ຖ້າຍົກເລີກຕິກກັບຄືນ (ບໍ່ຄົບອີກ) ໃຫ້ຖອນສະຖານະ "ກວດແລ້ວ" ຄືນ
+    await sb.from('fw_requests').update({ status: 'submitted' }).eq('id', id);
+    if (statusEl) { statusEl.textContent = '📥 ຍັງກວດບໍ່ຄົບ — ຕ້ອງກາຄົບທັງ 3 ຂໍ້ ຈຶ່ງຈະແຈ້ງເຕືອນໄປຫາບໍລິສັດ'; statusEl.style.color = '#e67e22'; }
+    loadFwRequestsAdmin();
+  }
+}
+
 async function markFwRequestReviewed(id) {
-  const { error } = await sb.from('fw_requests').update({ status: 'reviewed' }).eq('id', id);
+  const { error } = await sb.from('fw_requests').update({ status: 'reviewed', checked_workers: true, checked_quota: true, checked_tax: true, reviewed_at: new Date().toISOString() }).eq('id', id);
   if (error) { alert('ຜິດພາດ: ' + error.message); return; }
   loadFwRequestsAdmin();
 }
