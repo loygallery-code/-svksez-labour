@@ -653,7 +653,7 @@ async function checkNotifications() {
           notifications.push({
             type: 'success',
             key,
-            msg: `✅ ຄຳຂໍ${r.request_type === 'new' ? 'ລົງທະບຽນແຮງງານ ຕປທ ໃໝ່' : 'ຕໍ່ອາຍຸເອກະສານແຮງງານ ຕປທ'} ຂອງທ່ານ ຖືກແອັດມິນກວດເອກະສານຄົບຖ້ວນແລ້ວ`,
+            msg: `✅ ຄຳຂໍ${r.request_type === 'new' ? 'ລົງທະບຽນແຮງງານ ຕປທ ໃໝ່' : 'ຕໍ່ອາຍຸເອກະສານແຮງງານ ຕປທ'} ຂອງທ່ານ ຖືກແອັດມິນກວດເອກະສານຄົບຖ້ວນແລ້ວ — ⏳ ລໍຖ້າອະນຸມັດຂັ້ນສຸດທ້າຍ`,
             page: 'myFwRequests'
           });
         }
@@ -1695,6 +1695,8 @@ function buildFwTrackerHtml(r) {
         ${lineHtml(step3Done)}
         ${stepHtml('ອະນຸມັດຂັ້ນສຸດທ້າຍ', step3Done, step2Done && !step3Done, r.final_approved_at ? laoDate(r.final_approved_at) : '')}
       </div>
+      ${step2Done && !step3Done ? '<div style="text-align:center;font-size:12px;color:#e67e22;font-weight:600;margin-top:10px;">⏳ ລໍຖ້າອະນຸມັດຂັ້ນສຸດທ້າຍ</div>' : ''}
+      ${step3Done ? `<div style="text-align:center;font-size:13px;color:#2e9d67;font-weight:700;margin-top:10px;">✅ ເອກະສານອະນຸມັດແລ້ວ${companyDocUrl(r.approved_file) ? ` — <a href="${escAttr(companyDocUrl(r.approved_file))}" target="_blank" rel="noopener" style="color:#1769C2;">📄 ເບິ່ງ/ດາວໂຫລດເອກະສານທີ່ເຊັນອະນຸມັດ</a>` : ''}</div>` : ''}
     </div>`;
 }
 
@@ -6035,7 +6037,8 @@ async function generateLetterFromSelected() {
             quota_file: quotaInfo.file,
             tax_cert_no: taxInfo.no,
             tax_cert_date: taxInfo.date,
-            tax_cert_file: taxInfo.file
+            tax_cert_file: taxInfo.file,
+            doc_no: window_docNo
           });
         } catch(e) { /* ignore */ }
       })();
@@ -7408,11 +7411,53 @@ async function viewFwRequest(id) {
 
 // ອະນຸມັດຂັ້ນສຸດທ້າຍ — ຂັ້ນຕອນສຸດທ້າຍຂອງລະບົບແທຣັກກິງ, ແຈ້ງເຕືອນໄປຫາບໍລິສັດ
 async function finalApproveFwRequest(id) {
-  if (!confirm('ຢືນຢັນອະນຸມັດຂັ້ນສຸດທ້າຍ? ບໍລິສັດຈະໄດ້ຮັບການແຈ້ງເຕືອນທັນທີ')) return;
-  const { error } = await sb.from('fw_requests').update({ final_approved: true, final_approved_at: new Date().toISOString() }).eq('id', id);
-  if (error) { alert('ຜິດພາດ: ' + error.message); return; }
-  viewFwRequest(id);
-  loadFwRequestsAdmin();
+  const { data: r } = await sb.from('fw_requests').select('doc_no,created_at').eq('id', id).single();
+  const docNo = r?.doc_no || '-';
+  const docDate = r?.created_at ? laoDate(r.created_at) : '-';
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:16px;width:min(480px,94vw);padding:26px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.onclick = (e) => e.stopPropagation();
+  panel.innerHTML = `
+    <div style="font-size:16px;font-weight:700;color:#154360;margin-bottom:4px;">✅ ອະນຸມັດຂັ້ນສຸດທ້າຍ</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">ອ້າງອີງໃບສະເໜີ ເລກທີ <b>${esc(docNo)}</b> ລົງວັນທີ <b>${docDate}</b></div>
+    <div class="form-field" style="margin-bottom:10px;"><label>ອັບໂຫລດເອກະສານທີ່ເຊັນອະນຸມັດແລ້ວ (PDF) <span style="color:red;">*</span></label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fwApprovedFileInput').click()">📎 ເລືອກໄຟລ໌</button>
+        <span id="fwApprovedFileStatus" style="font-size:12px;color:#888;">ຍັງບໍ່ໄດ້ເລືອກໄຟລ໌</span>
+      </div>
+      <input type="file" id="fwApprovedFileInput" accept="application/pdf" style="display:none;">
+    </div>
+    <div style="text-align:right;margin-top:18px;display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-secondary" id="fwApprovedCancelBtn">ຍົກເລີກ</button>
+      <button class="btn btn-success" id="fwApprovedConfirmBtn">✅ ຢືນຢັນອະນຸມັດ</button>
+    </div>`;
+  const closeFn = () => overlay.remove();
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  let approvedFile = null;
+  document.getElementById('fwApprovedFileInput').onchange = (e) => {
+    approvedFile = e.target.files[0] || null;
+    document.getElementById('fwApprovedFileStatus').textContent = approvedFile ? `✅ ${approvedFile.name}` : 'ຍັງບໍ່ໄດ້ເລືອກໄຟລ໌';
+  };
+  document.getElementById('fwApprovedCancelBtn').onclick = closeFn;
+  document.getElementById('fwApprovedConfirmBtn').onclick = async () => {
+    if (!approvedFile) { alert('ກະລຸນາອັບໂຫລດເອກະສານທີ່ເຊັນອະນຸມັດແລ້ວກ່ອນ'); return; }
+    const confirmBtn = document.getElementById('fwApprovedConfirmBtn');
+    confirmBtn.disabled = true; confirmBtn.textContent = '⏳ ກຳລັງອັບໂຫລດ...';
+    const safeDocNo = String(docNo).replace(/[^a-zA-Z0-9]/g, '');
+    const path = `approved/${safeDocNo}_${Date.now()}.pdf`;
+    const { error: upErr } = await supabaseRetry(() => sb.storage.from('company-docs').upload(path, approvedFile, { upsert: true }));
+    if (upErr) { alert('ອັບໂຫລດຜິດພາດ: ' + upErr.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນອະນຸມັດ'; return; }
+    const { error } = await sb.from('fw_requests').update({ final_approved: true, final_approved_at: new Date().toISOString(), approved_file: path }).eq('id', id);
+    if (error) { alert('ຜິດພາດ: ' + error.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນອະນຸມັດ'; return; }
+    closeFn();
+    viewFwRequest(id);
+    loadFwRequestsAdmin();
+  };
 }
 
 async function rejectFwRequest(id) {
