@@ -7421,15 +7421,21 @@ async function addCopyWatermark(file) {
   pages.forEach(page => {
     const { width, height } = page.getSize();
     const text = 'COPY';
-    const fontSize = Math.min(width, height) * 0.28;
+    const fontSize = Math.min(width, height) * 0.20;
     const textWidth = font.widthOfTextAtSize(text, fontSize);
+    const textHeight = font.heightAtSize(fontSize);
+    // ຄິດໄລ່ຕຳແໜ່ງໃຫ້ຢູ່ກາງໜ້າພິມແທ້ໆ ຫຼັງໝູນ (rotate ຂອງ pdf-lib ໝູນອ້ອມ x,y ທີ່ລະບຸ, ບໍ່ແມ່ນອ້ອມຈຸດກາງໂຕໜັງສື — ຕ້ອງຄິດໄລ່ offset ຊົດເຊີຍ)
+    const angleRad = -35 * Math.PI / 180;
+    const cx = width / 2, cy = height / 2;
+    const dx = (textWidth / 2) * Math.cos(angleRad) - (textHeight * 0.35) * Math.sin(angleRad);
+    const dy = (textWidth / 2) * Math.sin(angleRad) + (textHeight * 0.35) * Math.cos(angleRad);
     page.drawText(text, {
-      x: width / 2 - textWidth / 2.6,
-      y: height / 2 - fontSize / 3,
+      x: cx - dx,
+      y: cy - dy,
       size: fontSize,
       font,
-      color: rgb(0.85, 0.1, 0.1),
-      opacity: 0.35,
+      color: rgb(0.85, 0, 0),
+      opacity: 0.6,
       rotate: degrees(-35),
     });
   });
