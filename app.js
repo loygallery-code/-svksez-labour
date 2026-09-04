@@ -7413,6 +7413,7 @@ async function viewFwRequest(id) {
 // ອະນຸມັດຂັ້ນສຸດທ້າຍ — ຂັ້ນຕອນສຸດທ້າຍຂອງລະບົບແທຣັກກິງ, ແຈ້ງເຕືອນໄປຫາບໍລິສັດ
 // ປະທັບລາຍນ້ຳ "COPY" ສີແດງໃຫຍ່ຂວາງກາງໜ້າ PDF (ໃຊ້ pdf-lib, ເຮັດຢູ່ browser ກ່ອນອັບໂຫລດ) — ສະບັບນີ້ຄືສະບັບທີ່ບໍລິສັດຈະເຫັນ, ບໍ່ແມ່ນເອກະສານແທ້
 async function addCopyWatermark(file) {
+  if (typeof PDFLib === 'undefined') { throw new Error('ບໍ່ພົບໄລບຣາຣີ PDFLib — ກວດວ່າ index.html ອັບໂຫລດຂຶ້ນ GitHub ຄົບຖ້ວນແລ້ວ ແລະ hard refresh (Ctrl+Shift+R) ແລ້ວບໍ່'); }
   const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
   const bytes = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(bytes);
@@ -7434,8 +7435,8 @@ async function addCopyWatermark(file) {
       y: cy - dy,
       size: fontSize,
       font,
-      color: rgb(0.85, 0, 0),
-      opacity: 0.6,
+      color: rgb(0.75, 0, 0),
+      opacity: 0.75,
       rotate: degrees(-35),
     });
   });
