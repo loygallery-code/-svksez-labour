@@ -7394,7 +7394,8 @@ async function viewFwRequest(id) {
     <div style="background:#fff;border:1px solid #e1e8f0;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
       <div style="font-size:13px;font-weight:700;color:#154360;margin-bottom:8px;">🏁 ຂັ້ນຕອນສຸດທ້າຍ</div>
       ${r.final_approved
-        ? `<div style="font-size:13px;color:#2e9d67;font-weight:600;">✅ ອະນຸມັດຂັ້ນສຸດທ້າຍແລ້ວ ${r.final_approved_at ? '(' + laoDate(r.final_approved_at) + ')' : ''}</div>`
+        ? `<div style="font-size:13px;color:#2e9d67;font-weight:600;">✅ ອະນຸມັດຂັ້ນສຸດທ້າຍແລ້ວ ${r.final_approved_at ? '(' + laoDate(r.final_approved_at) + ')' : ''}</div>
+           ${companyDocUrl(r.approved_file_original) ? `<div style="font-size:12px;margin-top:6px;"><a href="${escAttr(companyDocUrl(r.approved_file_original))}" target="_blank" rel="noopener" style="color:#1769C2;">📄 ເບິ່ງເອກະສານຕົ້ນສະບັບ (ບໍ່ມີລາຍນ້ຳ — ສະເພາະແອັດມິນ)</a></div>` : ''}`
         : r.rejected
         ? `<div style="font-size:13px;color:#c0392b;font-weight:600;">❌ ຖືກປະຕິເສດແລ້ວ</div>`
         : r.status === 'reviewed'
@@ -7410,6 +7411,32 @@ async function viewFwRequest(id) {
 }
 
 // ອະນຸມັດຂັ້ນສຸດທ້າຍ — ຂັ້ນຕອນສຸດທ້າຍຂອງລະບົບແທຣັກກິງ, ແຈ້ງເຕືອນໄປຫາບໍລິສັດ
+// ປະທັບລາຍນ້ຳ "COPY" ສີແດງໃຫຍ່ຂວາງກາງໜ້າ PDF (ໃຊ້ pdf-lib, ເຮັດຢູ່ browser ກ່ອນອັບໂຫລດ) — ສະບັບນີ້ຄືສະບັບທີ່ບໍລິສັດຈະເຫັນ, ບໍ່ແມ່ນເອກະສານແທ້
+async function addCopyWatermark(file) {
+  const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
+  const bytes = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(bytes);
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pages = pdfDoc.getPages();
+  pages.forEach(page => {
+    const { width, height } = page.getSize();
+    const text = 'COPY';
+    const fontSize = Math.min(width, height) * 0.28;
+    const textWidth = font.widthOfTextAtSize(text, fontSize);
+    page.drawText(text, {
+      x: width / 2 - textWidth / 2.6,
+      y: height / 2 - fontSize / 3,
+      size: fontSize,
+      font,
+      color: rgb(0.85, 0.1, 0.1),
+      opacity: 0.35,
+      rotate: degrees(-35),
+    });
+  });
+  const watermarkedBytes = await pdfDoc.save();
+  return new Blob([watermarkedBytes], { type: 'application/pdf' });
+}
+
 async function finalApproveFwRequest(id) {
   const { data: r } = await sb.from('fw_requests').select('doc_no,created_at').eq('id', id).single();
   const docNo = r?.doc_no || '-';
@@ -7447,12 +7474,30 @@ async function finalApproveFwRequest(id) {
   document.getElementById('fwApprovedConfirmBtn').onclick = async () => {
     if (!approvedFile) { alert('ກະລຸນາອັບໂຫລດເອກະສານທີ່ເຊັນອະນຸມັດແລ້ວກ່ອນ'); return; }
     const confirmBtn = document.getElementById('fwApprovedConfirmBtn');
-    confirmBtn.disabled = true; confirmBtn.textContent = '⏳ ກຳລັງອັບໂຫລດ...';
+    confirmBtn.disabled = true; confirmBtn.textContent = '⏳ ກຳລັງປະທັບລາຍນ້ຳ...';
     const safeDocNo = String(docNo).replace(/[^a-zA-Z0-9]/g, '');
-    const path = `approved/${safeDocNo}_${Date.now()}.pdf`;
-    const { error: upErr } = await supabaseRetry(() => sb.storage.from('company-docs').upload(path, approvedFile, { upsert: true }));
+    const ts = Date.now();
+
+    // 1) ເກັບເອກະສານຕົ້ນສະບັບໄວ້ (ສະບັບແທ້, ໃຫ້ແອັດມິນເບິ່ງ — ບໍ່ມີລາຍນ້ຳ)
+    const originalPath = `approved-original/${safeDocNo}_${ts}.pdf`;
+    const { error: origErr } = await supabaseRetry(() => sb.storage.from('company-docs').upload(originalPath, approvedFile, { upsert: true }));
+    if (origErr) { alert('ອັບໂຫລດຜິດພາດ (ຕົ້ນສະບັບ): ' + origErr.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນອະນຸມັດ'; return; }
+
+    // 2) ສ້າງສະບັບລາຍນ້ຳ "COPY" ສີແດງ ໃຫ້ບໍລິສັດເຫັນແທນ
+    let watermarkedBlob;
+    try {
+      watermarkedBlob = await addCopyWatermark(approvedFile);
+    } catch (e) {
+      alert('ບໍ່ສາມາດປະທັບລາຍນ້ຳໄດ້ (ອາດຍ້ອນໄຟລ໌ບໍ່ແມ່ນ PDF ປົກກະຕິ): ' + e.message);
+      confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນອະນຸມັດ';
+      return;
+    }
+    confirmBtn.textContent = '⏳ ກຳລັງອັບໂຫລດ...';
+    const path = `approved/${safeDocNo}_${ts}.pdf`;
+    const { error: upErr } = await supabaseRetry(() => sb.storage.from('company-docs').upload(path, watermarkedBlob, { upsert: true }));
     if (upErr) { alert('ອັບໂຫລດຜິດພາດ: ' + upErr.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນອະນຸມັດ'; return; }
-    const { error } = await sb.from('fw_requests').update({ final_approved: true, final_approved_at: new Date().toISOString(), approved_file: path }).eq('id', id);
+
+    const { error } = await sb.from('fw_requests').update({ final_approved: true, final_approved_at: new Date().toISOString(), approved_file: path, approved_file_original: originalPath }).eq('id', id);
     if (error) { alert('ຜິດພາດ: ' + error.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນອະນຸມັດ'; return; }
     closeFn();
     viewFwRequest(id);
