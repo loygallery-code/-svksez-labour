@@ -7506,6 +7506,7 @@ async function finalApproveFwRequest(id) {
 
     const { error } = await sb.from('fw_requests').update({ final_approved: true, final_approved_at: new Date().toISOString(), approved_file: path, approved_file_original: originalPath }).eq('id', id);
     if (error) { alert('ຜິດພາດ: ' + error.message); confirmBtn.disabled = false; confirmBtn.textContent = '✅ ຢືນຢັນອະນຸມັດ'; return; }
+    alert(`✅ ອະນຸມັດສຳເລັດ — ໄຟລ໌ລາຍນ້ຳ COPY ຂະໜາດ ${(watermarkedBlob.size/1024).toFixed(1)} KB ຖືກອັບໂຫລດແລ້ວ (ຖ້າຂະໜາດໄຟລ໌ນີ້ໃກ້ຄຽງກັບໄຟລ໌ຕົ້ນສະບັບ ແປວ່າລາຍນ້ຳຖືກເພີ່ມແທ້, ລອງກົດລິ້ງ "ເບິ່ງເອກະສານ" ຢູ່ຝັ່ງບໍລິສັດເພື່ອກວດຄືນ)`);
     closeFn();
     viewFwRequest(id);
     loadFwRequestsAdmin();
