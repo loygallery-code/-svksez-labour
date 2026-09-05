@@ -371,6 +371,7 @@ function buildSidebar() {
       <li><a href="#" onclick="loadPage('companies')"><span class="icon">🏭</span>ຂໍ້ມູນບໍລິສັດ</a></li>
       ${isAdmin ? `<li><a href="#" onclick="loadPage('manageUsers')"><span class="icon">👥</span>ຈັດການ Users</a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('auditLog')"><span class="icon">🕵️</span>Audit Log<span id="auditNotifBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
+      ${isAdmin ? `<li><a href="#" onclick="loadPage('companyArchive')"><span class="icon">🗄️</span>ຄັງຂໍ້ມູນບໍລິສັດ</a></li>` : ''}
       <li><div class="sidebar-section">ສະຖິຕິ</div></li>
       <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>ແຮງງານທັງໝົດ</a></li>
       <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>ແຮງງານຕ່າງປະເທດ</a></li>
@@ -755,6 +756,7 @@ function loadPage(page, pushState=true) {
   switch(page) {
     case 'dashboard': content.innerHTML = pageDashboard(); break;
     case 'companies': content.innerHTML = pageCompanies(); loadCompanyTable(); break;
+    case 'companyArchive': content.innerHTML = pageCompanyArchive(); loadCompanyArchive(); break;
     case 'manageUsers': content.innerHTML = pageManageUsers(); loadManageUsers(); break;
     case 'summary51': content.innerHTML = pageSummary51(); loadSummary51(); break;
     case 'summary52': content.innerHTML = pageSummary52(); loadSummary52(); break;
@@ -1422,6 +1424,128 @@ function pageCompanies() {
   </div>`;
 }
 
+// ---- ADMIN ONLY: ຄັງຂໍ້ມູນບໍລິສັດ — ເກັບຂໍ້ມູນບໍລິສັດທັງໝົດ (ເຄື່ອນໄຫວ/ຖືກລະງັບ/ຖືກລຶບ) ພ້ອມຄົ້ນຫາ ແລະ ພິມລາຍງານ ----
+function pageCompanyArchive() {
+  return `
+  <div class="card">
+    <div class="card-header" style="background:linear-gradient(135deg,#3a3a3a,#1a1a1a);border-radius:12px 12px 0 0;border-bottom:none;">
+      <span class="card-title" style="color:#fff;">🗄️ ຄັງຂໍ້ມູນບໍລິສັດ<br><span style="font-size:11px;color:#ccc;font-weight:400;">Company Archive — Active / Suspended / Deleted (Admin Only)</span></span>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+        <div class="form-field">
+          <label>ປະເພດບໍລິສັດ</label>
+          <select id="carchStatus" onchange="loadCompanyArchive()">
+            <option value="">ທັງໝົດ</option>
+            <option value="active">🟢 ບໍລິສັດເຄື່ອນໄຫວ</option>
+            <option value="suspended">🔴 ບໍລິສັດຖືກລະງັບ</option>
+            <option value="deleted">🗑️ ບໍລິສັດຖືກລຶບ</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>ຄົ້ນຫາຊື່</label>
+          <input type="text" id="carchSearch" placeholder="ຊື່ບໍລິສັດ/Username" oninput="loadCompanyArchive()">
+        </div>
+        <div class="form-field">
+          <label>ເຂດ</label>
+          <select id="carchZone" onchange="loadCompanyArchive()">
+            <option value="">ທຸກເຂດ</option>
+            <option value="A">ເຂດ A</option><option value="B">ເຂດ B</option><option value="B1">ເຂດ B1</option>
+            <option value="C">ເຂດ C</option><option value="D">ເຂດ D</option><option value="E">ເຂດ E</option>
+          </select>
+        </div>
+        <div class="form-field" style="justify-content:flex-end;">
+          <button class="btn btn-info" onclick="printCompanyArchive()">🖨️ ພິມລາຍງານ</button>
+        </div>
+      </div>
+      <div id="carchSummary" style="margin-bottom:12px;font-size:13px;color:#555;"></div>
+      <div class="table-wrap" id="carchTable"><div style="text-align:center;color:#aaa;padding:30px;">ກຳລັງໂຫຼດ...</div></div>
+    </div>
+  </div>`;
+}
+
+let _companyArchiveCache = [];
+
+async function loadCompanyArchive() {
+  const el = document.getElementById('carchTable');
+  if (!el) return;
+  const { data, error } = await sb.from('companies').select('*').order('zone').order('zone_number');
+  if (error) { el.innerHTML = `<div class="alert alert-danger">❌ ${error.message}</div>`; return; }
+  const companies = (data || []).filter(c => !c.is_admin && !c.is_viewer);
+
+  // ດຶງຈຳນວນແຮງງານ (ລາວ+ຕ່າງປະເທດ) ຂອງທຸກບໍລິສັດພ້ອມກັນ
+  const [{ data: laoData }, { data: fwData }] = await Promise.all([
+    sb.from('lao_workers').select('id,company_id'),
+    sb.from('foreign_workers').select('id,company_id')
+  ]);
+  const laoCountMap = {}, fwCountMap = {};
+  (laoData||[]).forEach(w => { laoCountMap[w.company_id] = (laoCountMap[w.company_id]||0) + 1; });
+  (fwData||[]).forEach(w => { fwCountMap[w.company_id] = (fwCountMap[w.company_id]||0) + 1; });
+
+  _companyArchiveCache = companies.map(c => ({
+    ...c,
+    lao_count: laoCountMap[c.id] || 0,
+    fw_count: fwCountMap[c.id] || 0,
+  }));
+
+  const statusFilter = document.getElementById('carchStatus')?.value || '';
+  const searchQ = (document.getElementById('carchSearch')?.value || '').trim().toLowerCase();
+  const zoneFilter = document.getElementById('carchZone')?.value || '';
+
+  let filtered = _companyArchiveCache.filter(c => {
+    if (statusFilter === 'active' && (c.is_deleted || c.is_active === false)) return false;
+    if (statusFilter === 'suspended' && (c.is_deleted || c.is_active !== false)) return false;
+    if (statusFilter === 'deleted' && !c.is_deleted) return false;
+    if (zoneFilter && c.zone !== zoneFilter) return false;
+    if (searchQ && !(`${c.username} ${c.name_lao} ${c.name_eng}`.toLowerCase().includes(searchQ))) return false;
+    return true;
+  });
+
+  const statusBadge = c => c.is_deleted
+    ? '<span style="color:#c0392b;font-weight:600;">🗑️ ຖືກລຶບ</span>'
+    : c.is_active === false
+    ? '<span style="color:#e67e22;font-weight:600;">🔴 ຖືກລະງັບ</span>'
+    : '<span style="color:#2e9d67;font-weight:600;">🟢 ເຄື່ອນໄຫວ</span>';
+
+  const totalWorkers = filtered.reduce((s,c) => s + c.lao_count + c.fw_count, 0);
+  document.getElementById('carchSummary').innerHTML =
+    `ພົບ <b>${filtered.length}</b> ບໍລິສັດ — ລວມແຮງງານ <b>${totalWorkers}</b> ຄົນ (ລາວ ${filtered.reduce((s,c)=>s+c.lao_count,0)} + ຕ່າງປະເທດ ${filtered.reduce((s,c)=>s+c.fw_count,0)})`;
+
+  el.innerHTML = `<table><thead><tr>
+      <th style="padding:8px;">Username</th><th style="padding:8px;">ຊື່ບໍລິສັດ</th><th style="padding:8px;">ເຂດ</th>
+      <th style="padding:8px;">ສະຖານະ</th><th style="padding:8px;text-align:center;">ລາວ</th>
+      <th style="padding:8px;text-align:center;">ຕ່າງປະເທດ</th><th style="padding:8px;text-align:center;">ລວມ</th>
+      ${filtered.some(c=>c.is_deleted) ? '<th style="padding:8px;">ວັນທີຖືກລຶບ</th>' : ''}
+    </tr></thead><tbody>${filtered.map(c => `
+      <tr>
+        <td style="padding:8px;">${esc(c.username||'')}</td>
+        <td style="padding:8px;">${esc(c.name_lao||'')}</td>
+        <td style="padding:8px;">ເຂດ ${esc(c.zone||'-')}</td>
+        <td style="padding:8px;">${statusBadge(c)}</td>
+        <td style="padding:8px;text-align:center;">${c.lao_count}</td>
+        <td style="padding:8px;text-align:center;">${c.fw_count}</td>
+        <td style="padding:8px;text-align:center;font-weight:700;">${c.lao_count + c.fw_count}</td>
+        ${filtered.some(x=>x.is_deleted) ? `<td style="padding:8px;">${c.deleted_at ? laoDate(c.deleted_at) : '-'}</td>` : ''}
+      </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px;">ບໍ່ພົບຂໍ້ມູນ</td></tr>`}
+    </tbody></table>`;
+}
+
+function printCompanyArchive() {
+  const tableHtml = document.getElementById('carchTable')?.innerHTML || '';
+  const summaryHtml = document.getElementById('carchSummary')?.innerHTML || '';
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ຄັງຂໍ້ມູນບໍລິສັດ</title>
+    <style>body{font-family:'Noto Sans Lao',sans-serif;padding:24px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:6px;}</style>
+    </head><body>
+    <h2>ຄັງຂໍ້ມູນບໍລິສັດ — SVKSEZ Labour Statistics</h2>
+    <p>ພິມເມື່ອ: ${new Date().toLocaleDateString('lo-LA')}</p>
+    <p>${summaryHtml}</p>
+    ${tableHtml}
+    </body></html>`);
+  w.document.close();
+  w.onload = () => w.print();
+}
+
 function filterCompanyTable(){
   const zone = document.getElementById('filterZone')?.value || '';
   const q = (document.getElementById('searchCompanyInline')?.value || '').toLowerCase();
@@ -1441,7 +1565,7 @@ async function loadCompanyTable() {
   await loadCompanies();
   const tbody = document.getElementById('companyTableBody');
   if (!tbody) return;
-  let realCompanies = allCompanies.filter(c => !c.is_admin && !c.is_viewer); // ບໍ່ສະແດງບັນຊີພິເສດ (admin/viewer) — ບັນຊີເຫຼົ່ານັ້ນສະແດງຢູ່ໜ້າ "ຈັດການ Users" ແລ້ວ
+  let realCompanies = allCompanies.filter(c => !c.is_admin && !c.is_viewer && !c.is_deleted); // ບໍ່ສະແດງບັນຊີພິເສດ (admin/viewer) ແລະ ບໍລິສັດທີ່ຖືກລຶບ — ບໍລິສັດຖືກລຶບເບິ່ງໄດ້ຢູ່ໜ້າ "ຄັງຂໍ້ມູນບໍລິສັດ" ແທນ
   // ສະເພາະ admin ເທົ່ານັ້ນທີ່ເຫັນບໍລິສັດທີ່ຖືກລະງັບ/ບໍ່ເຄື່ອນໄຫວ — director, ຮອງ director, ຫົວໜ້າຂະແໜງ, print_only ແລະ ບໍລິສັດ ເຫັນສະເພາະບໍລິສັດ active ເທົ່ານັ້ນ
   if (currentUser.role !== 'admin') { realCompanies = realCompanies.filter(c => c.is_active !== false); }
   tbody.innerHTML = realCompanies.map(c => {
@@ -1502,7 +1626,7 @@ async function reactivateCompany(id, nameLao) {
 // ລຶບບໍລິສັດຖາວອນ — ລຶບຂໍ້ມູນທີ່ກ່ຽວຂ້ອງທັງໝົດອອກຈາກທຸກຕາຕະລາງ (ບໍ່ສາມາດກູ້ຄືນໄດ້)
 // ============================================================
 async function deleteCompanyPermanently(id, nameLao, username) {
-  const warning = `⚠️ ການລຶບຖາວອນ ⚠️\n\nບໍລິສັດ: "${nameLao}" (${username})\n\nຈະລຶບຂໍ້ມູນທັງໝົດຂອງບໍລິສັດນີ້ອອກຈາກລະບົບ ລວມທັງ:\n- ຂໍ້ມູນບໍລິສັດ\n- ແຮງງານຕ່າງປະເທດ ແລະ ແຮງງານລາວ\n- ປະຫວັດການລາອອກ\n- ຂໍ້ມູນສະຖິຕິ/ບົດລາຍງານປະຈຳເດືອນ\n- ຂໍ້ມູນອື່ນໆທີ່ກ່ຽວຂ້ອງທັງໝົດ\n\n❌ ບໍ່ສາມາດກູ້ຄືນໄດ້ອີກ! ❌\n\nຖ້າແນ່ໃຈ ໃຫ້ພິມຊື່ຢຸດເຊີ "${username}" ຂ້າງລຸ່ມນີ້ເພື່ອຢືນຢັນ:`;
+  const warning = `⚠️ ການລຶບບໍລິສັດ ⚠️\n\nບໍລິສັດ: "${nameLao}" (${username})\n\nບໍລິສັດຈະຖືກຍ້າຍໄປໜ້າ "ຄັງຂໍ້ມູນບໍລິສັດ" (ສະເພາະແອັດມິນເຫັນ) — ຈະບໍ່ສະແດງໃນລະບົບປົກກະຕິອີກຕໍ່ໄປ ແຕ່ຂໍ້ມູນແຮງງານ/ສະຖິຕິທັງໝົດຍັງຖືກເກັບໄວ້ຄົບຖ້ວນເພື່ອອ້າງອີງພາຍຫຼັງ\n\nຖ້າແນ່ໃຈ ໃຫ້ພິມຊື່ຢຸດເຊີ "${username}" ຂ້າງລຸ່ມນີ້ເພື່ອຢືນຢັນ:`;
   const confirmInput = prompt(warning);
   const normalize = s => (s || '').trim().toLowerCase();
   if (confirmInput === null) return; // ຜູ້ໃຊ້ກົດ Cancel
@@ -1511,20 +1635,13 @@ async function deleteCompanyPermanently(id, nameLao, username) {
     return;
   }
 
-  const tablesWithCompanyId = [
-    'foreign_workers', 'lao_workers', 'resignations', 'foreign_worker_renewals',
-    'fw_requests', 'emp_movements', 'records', 'baseline_workers', 'baseline_status'
-  ];
-
   try {
-    for (const t of tablesWithCompanyId) {
-      await sb.from(t).delete().eq('company_id', id);
-    }
-    const { error } = await sb.from('companies').delete().eq('id', id);
+    // ລຶບແບບ "ເກັບໄວ້" (soft delete) — ບໍ່ລຶບຂໍ້ມູນແຮງງານ/ສະຖິຕິອອກຈາກຖານຂໍ້ມູນອີກຕໍ່ໄປ, ພຽງແຕ່ໝາຍວ່າຖືກລຶບ ແລະ ເຊື່ອງອອກຈາກລະບົບປົກກະຕິ
+    const { error } = await sb.from('companies').update({ is_deleted: true, deleted_at: new Date().toISOString(), is_active: false }).eq('id', id);
     if (error) throw error;
 
-    await logAudit('delete', 'companies', id, { action_detail: 'ລຶບບໍລິສັດຖາວອນ (ພ້ອມຂໍ້ມູນທີ່ກ່ຽວຂ້ອງທັງໝົດ)', name_lao: nameLao, username });
-    alert(`✅ ລຶບບໍລິສັດ "${nameLao}" ແລະ ຂໍ້ມູນທີ່ກ່ຽວຂ້ອງທັງໝົດອອກຈາກລະບົບສຳເລັດແລ້ວ`);
+    await logAudit('delete', 'companies', id, { action_detail: 'ລຶບບໍລິສັດ (ເກັບຂໍ້ມູນໄວ້ໃນຄັງ — ບໍ່ໄດ້ລຶບຖາວອນອອກຈາກຖານຂໍ້ມູນ)', name_lao: nameLao, username });
+    alert(`✅ ລຶບບໍລິສັດ "${nameLao}" ອອກຈາກລະບົບປົກກະຕິສຳເລັດແລ້ວ — ຂໍ້ມູນຍັງເກັບໄວ້ໃນ "ຄັງຂໍ້ມູນບໍລິສັດ" ສຳລັບແອັດມິນ`);
     loadCompanyTable();
   } catch (e) {
     alert('ເກີດຂໍ້ຜິດພາດໃນການລຶບ: ' + e.message);
