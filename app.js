@@ -8019,6 +8019,7 @@ let _lwAdminCache = [];
 async function loadLaoWorkersAdmin() {
   const el = document.getElementById('lwAdminTable');
   if (!el) return;
+  await loadCompanies(); // ດຶງລາຍຊື່ບໍລິສັດໃໝ່ທຸກຄັ້ງ — ບໍ່ໃຫ້ຄ້າງຂໍ້ມູນບໍລິສັດທີ່ຖືກລະງັບ/ລຶບ
   const compSel = document.getElementById('lwAdminCompany');
   if (compSel && compSel.options.length === 1) {
     activeCompanies.forEach(c => {
@@ -8035,7 +8036,8 @@ async function loadLaoWorkersAdmin() {
       <span style="font-size:11px;">ກວດສອບວ່າຕາຕະລາງ <b>lao_workers</b> ຖືກສ້າງໃນ Supabase ແລ້ວ</span></div>`;
     return;
   }
-  _lwAdminCache = data || [];
+  const activeIds = new Set(activeCompanies.map(c => c.id)); // ບໍ່ນັບແຮງງານຂອງບໍລິສັດທີ່ຖືກລະງັບ/ລຶບ ໃຫ້ຄົງເສັ້ນຄົງວາກັບໜ້າພາບລວມ
+  _lwAdminCache = (data || []).filter(w => activeIds.has(w.company_id));
   renderLaoRegDateSummary(_lwAdminCache, 'lwAdminRegDateSummary');
   renderLaoWorkersAdmin(_lwAdminCache);
 }
