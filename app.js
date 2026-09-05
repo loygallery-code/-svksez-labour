@@ -408,7 +408,8 @@ function buildSidebar() {
 async function loadCompanies() {
   const { data } = await sb.from('companies').select('*').order('zone').order('zone_number');
   allCompanies = data || [];
-  activeCompanies = allCompanies.filter(c => c.is_active !== false && /^(SVKSEZ-|SSEZ@)/i.test(c.username || ''));
+  // ບໍ່ຈຳກັດຮູບແບບຊື່ບັນຊີອີກຕໍ່ໄປ (ເຄີຍຈຳກັດແຄ່ SVKSEZ-/SSEZ@ ເຮັດໃຫ້ບໍລິສັດທີ່ຊື່ບັນຊີຮູບແບບອື່ນຖືກຕັດອອກຈາກສະຖິຕິລວມທັງໝົດໂດຍບໍ່ຕັ້ງໃຈ) — ໃຊ້ພຽງ is_active ແລະ ບໍ່ແມ່ນບັນຊີພິເສດ (admin/viewer) ເປັນເງື່ອນໄຂ
+  activeCompanies = allCompanies.filter(c => c.is_active !== false && !c.is_admin && !c.is_viewer);
 }
 
 // ============================================================
@@ -1164,6 +1165,7 @@ function expandDashCard(el, ev) {
 }
 
 async function loadDashboard() {
+  await loadCompanies(); // ດຶງລາຍຊື່ບໍລິສັດ+ສະຖານະ active/suspended ໃໝ່ທຸກຄັ້ງ — ບໍ່ໃຫ້ໃຊ້ຄ່າເກົ່າຄ້າງ (ສາເຫດທີ່ຂໍ້ມູນບໍລິສັດທີ່ຖືກລະງັບ/ລຶບຍັງເຫັນຄ້າງຢູ່ໜ້າພາບລວມ)
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
@@ -1439,7 +1441,9 @@ async function loadCompanyTable() {
   await loadCompanies();
   const tbody = document.getElementById('companyTableBody');
   if (!tbody) return;
-  const realCompanies = allCompanies.filter(c => !c.is_admin && !c.is_viewer); // ບໍ່ສະແດງບັນຊີພິເສດ (admin/viewer) — ບັນຊີເຫຼົ່ານັ້ນສະແດງຢູ່ໜ້າ "ຈັດການ Users" ແລ້ວ
+  let realCompanies = allCompanies.filter(c => !c.is_admin && !c.is_viewer); // ບໍ່ສະແດງບັນຊີພິເສດ (admin/viewer) — ບັນຊີເຫຼົ່ານັ້ນສະແດງຢູ່ໜ້າ "ຈັດການ Users" ແລ້ວ
+  // ສະເພາະ admin ເທົ່ານັ້ນທີ່ເຫັນບໍລິສັດທີ່ຖືກລະງັບ/ບໍ່ເຄື່ອນໄຫວ — director, ຮອງ director, ຫົວໜ້າຂະແໜງ, print_only ແລະ ບໍລິສັດ ເຫັນສະເພາະບໍລິສັດ active ເທົ່ານັ້ນ
+  if (currentUser.role !== 'admin') { realCompanies = realCompanies.filter(c => c.is_active !== false); }
   tbody.innerHTML = realCompanies.map(c => {
     const ruleStatus = getDocStatus(c.rule_date, 2);
     const healthStatus = getDocStatus(c.health_date, 1);
@@ -2191,6 +2195,7 @@ function pageSummary51() {
 }
 
 async function loadSummary51() {
+  await loadCompanies(); // ດຶງລາຍຊື່ບໍລິສັດໃໝ່ທຸກຄັ້ງ — ບໍ່ໃຫ້ຄ້າງຂໍ້ມູນບໍລິສັດທີ່ຖືກລະງັບ/ລຶບ
   // ດຶງຂໍ້ມູນຈາກ lao_workers + foreign_workers ໂດຍກົງ (ຄືກັບ Dashboard)
   // ເພື່ອໃຫ້ຕົວເລກກົງກັນກັບໜ້າພາບລວມ (FN + LA ເທົ່ານັ້ນ, ບໍ່ລວມ FNR)
   const activeIds = new Set(activeCompanies.map(c => c.id));
@@ -2281,6 +2286,7 @@ function pageSummary52() {
 }
 
 async function loadSummary52() {
+  await loadCompanies(); // ດຶງລາຍຊື່ບໍລິສັດໃໝ່ທຸກຄັ້ງ — ບໍ່ໃຫ້ຄ້າງຂໍ້ມູນບໍລິສັດທີ່ຖືກລະງັບ/ລຶບ
   const zoneFilter = document.getElementById('s52Zone')?.value || '';
   const filteredCompanies = zoneFilter ? activeCompanies.filter(c => c.zone === zoneFilter) : activeCompanies;
   const activeIds = new Set(filteredCompanies.map(c => c.id));
@@ -3115,7 +3121,8 @@ function doSearch() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   const list = document.getElementById('autocompleteList');
   if (!q) { list.style.display = 'none'; return; }
-  const matches = allCompanies.filter(c => c.username.toLowerCase().includes(q) || c.name_lao.toLowerCase().includes(q) || c.name_eng.toLowerCase().includes(q));
+  const searchPool = currentUser.role === 'admin' ? allCompanies : allCompanies.filter(c => c.is_active !== false); // ສະເພາະ admin ຄົ້ນຫາເຫັນບໍລິສັດທີ່ຖືກລະງັບໄດ້
+  const matches = searchPool.filter(c => c.username.toLowerCase().includes(q) || c.name_lao.toLowerCase().includes(q) || c.name_eng.toLowerCase().includes(q));
   if (matches.length === 0) { list.style.display = 'none'; return; }
   list.style.display = 'block';
   list.innerHTML = matches.slice(0, 10).map(c => `
