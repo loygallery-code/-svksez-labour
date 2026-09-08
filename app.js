@@ -1981,6 +1981,12 @@ function pageMyCompany() {
       </div>
       <div class="card-body"><div id="latestRecord"><div style="color:#aaa;padding:10px;">ກຳລັງໂຫຼດ...</div></div></div>
     </div>
+  </div>
+  <div class="card" style="margin-top:20px;">
+    <div class="card-header">
+      <span class="card-title">👥 ສະຖິຕິພະນັກງານ ແລະ ການລາອອກ ຂອງບໍລິສັດ<br><span style="font-size:11px;color:#888;font-weight:400;">Current Workforce &amp; Resignation Statistics</span></span>
+    </div>
+    <div class="card-body" id="myCompanyStats"><div style="color:#aaa;padding:10px;">ກຳລັງໂຫຼດ...</div></div>
   </div>`;
 }
 
@@ -2002,16 +2008,74 @@ async function loadMyCompany() {
       </div>
       <div class="section-title mt-4">ເອກະສານກ່ຽວຂ້ອງ</div>
       <div class="table-wrap"><table><thead><tr><th>ເອກະສານ</th><th>ເລກທີ</th><th>ວັນທີ</th><th>ສະຖານະ</th><th>ໄຟລ</th></tr></thead><tbody>
-        <tr><td>ໃບທະບຽນວິສາຫະກິດ</td><td>${c.biz_reg_no||'-'}</td><td>${c.biz_reg_date||'-'}</td><td>-</td><td>${c.biz_reg_file?`<a href="${c.biz_reg_file}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
-        <tr><td>ໃບອະນຸຍາດລົງທຶນ</td><td>${c.invest_no||'-'}</td><td>${c.invest_date||'-'}</td><td>-</td><td>${c.invest_file?`<a href="${c.invest_file}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
-        <tr><td>ໃບທະບຽນອາກອນ</td><td>${c.tax_no||'-'}</td><td>${c.tax_date||'-'}</td><td>-</td><td>${c.tax_file?`<a href="${c.tax_file}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
-        <tr><td>ໃບທະບຽນປະກັນສັງຄົມ</td><td>${c.social_no||'-'}</td><td>${c.social_date||'-'}</td><td>-</td><td>${c.social_file?`<a href="${c.social_file}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
-        <tr><td>ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ</td><td>${c.rule_no||'-'}</td><td>${c.rule_date||'-'}</td><td class="${ruleStatus.class}">${ruleStatus.text}</td><td>${c.rule_file?`<a href="${c.rule_file}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
-        <tr><td>ໃບຢັ້ງຢືນກວດສຸຂະພາບ</td><td>${c.health_no||'-'}</td><td>${c.health_date||'-'}</td><td class="${healthStatus.class}">${healthStatus.text}</td><td>${c.health_file?`<a href="${c.health_file}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
+        <tr><td>ໃບທະບຽນວິສາຫະກິດ</td><td>${c.biz_reg_no||'-'}</td><td>${c.biz_reg_date||'-'}</td><td>-</td><td>${companyDocUrl(c.biz_reg_file)?`<a href="${escAttr(companyDocUrl(c.biz_reg_file))}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
+        <tr><td>ໃບອະນຸຍາດລົງທຶນ</td><td>${c.invest_no||'-'}</td><td>${c.invest_date||'-'}</td><td>-</td><td>${companyDocUrl(c.invest_file)?`<a href="${escAttr(companyDocUrl(c.invest_file))}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
+        <tr><td>ໃບທະບຽນອາກອນ</td><td>${c.tax_no||'-'}</td><td>${c.tax_date||'-'}</td><td>-</td><td>${companyDocUrl(c.tax_file)?`<a href="${escAttr(companyDocUrl(c.tax_file))}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
+        <tr><td>ໃບທະບຽນປະກັນສັງຄົມ</td><td>${c.social_no||'-'}</td><td>${c.social_date||'-'}</td><td>-</td><td>${companyDocUrl(c.social_file)?`<a href="${escAttr(companyDocUrl(c.social_file))}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
+        <tr><td>ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ</td><td>${c.rule_no||'-'}</td><td>${c.rule_date||'-'}</td><td class="${ruleStatus.class}">${ruleStatus.text}</td><td>${companyDocUrl(c.rule_file)?`<a href="${escAttr(companyDocUrl(c.rule_file))}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
+        <tr><td>ໃບຢັ້ງຢືນກວດສຸຂະພາບ</td><td>${c.health_no||'-'}</td><td>${c.health_date||'-'}</td><td class="${healthStatus.class}">${healthStatus.text}</td><td>${companyDocUrl(c.health_file)?`<a href="${escAttr(companyDocUrl(c.health_file))}" target="_blank">ເບິ່ງ</a>`:'-'}</td></tr>
       </tbody></table></div>
     </div>`;
   loadMyRecord();  // load stats section below
+  loadMyCompanyStats(); // ໂຫລດສະຖິຕິພະນັກງານ + ການລາອອກຂອງບໍລິສັດນີ້
 }
+
+// ສະຖິຕິພະນັກງານປັດຈຸບັນ + ການລາອອກທັງໝົດ ຂອງບໍລິສັດຕົນເອງ (ຝັ່ງບໍລິສັດ, ໜ້າ "ຂໍ້ມູນ ແລະ ສະຖິຕິບໍລິສັດ")
+async function loadMyCompanyStats() {
+  const el = document.getElementById('myCompanyStats');
+  if (!el) return;
+  const coId = currentUser.companyId;
+
+  const [{ data: laoData }, { data: fwData }, { data: resData }] = await Promise.all([
+    sb.from('lao_workers').select('gender').eq('company_id', coId),
+    sb.from('foreign_workers').select('gender').eq('company_id', coId),
+    sb.from('resignations').select('worker_type,gender').eq('company_id', coId),
+  ]);
+  const isFemale = g => { const s = String(g||'').trim().toUpperCase(); return s === 'ຍິງ' || s === 'FEMALE' || s === 'F'; };
+
+  const laoM = (laoData||[]).filter(w => !isFemale(w.gender)).length;
+  const laoF = (laoData||[]).filter(w => isFemale(w.gender)).length;
+  const fwM  = (fwData||[]).filter(w => !isFemale(w.gender)).length;
+  const fwF  = (fwData||[]).filter(w => isFemale(w.gender)).length;
+  const laoTotal = laoM + laoF, fwTotal = fwM + fwF, grandTotal = laoTotal + fwTotal;
+
+  const resLao = (resData||[]).filter(r => r.worker_type === 'lao');
+  const resFw  = (resData||[]).filter(r => r.worker_type !== 'lao');
+  const resLaoM = resLao.filter(r => !isFemale(r.gender)).length;
+  const resLaoF = resLao.filter(r => isFemale(r.gender)).length;
+  const resFwM  = resFw.filter(r => !isFemale(r.gender)).length;
+  const resFwF  = resFw.filter(r => isFemale(r.gender)).length;
+  const resLaoTotal = resLaoM + resLaoF, resFwTotal = resFwM + resFwF, resGrandTotal = resLaoTotal + resFwTotal;
+
+  const statCard = (label, val, color) => `
+    <div style="background:#fff;border:1px solid #e1e8f0;border-radius:12px;padding:14px 16px;text-align:center;">
+      <div style="font-size:26px;font-weight:800;color:${color};">${val}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:2px;">${label}</div>
+    </div>`;
+
+  el.innerHTML = `
+    <div style="font-size:14px;font-weight:700;color:#154360;margin-bottom:10px;">👥 ຈຳນວນພະນັກງານປັດຈຸບັນ</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:24px;">
+      ${statCard('ລວມທັງໝົດ', grandTotal, '#154360')}
+      ${statCard('ລວມລາວ', laoTotal, '#1E88E5')}
+      ${statCard('ລາວຍິງ', laoF, '#5dade2')}
+      ${statCard('ລາວຊາຍ', laoM, '#2874a6')}
+      ${statCard('ລວມຕ່າງປະເທດ', fwTotal, '#8E24AA')}
+      ${statCard('ຕ່າງປະເທດຍິງ', fwF, '#ba68c8')}
+      ${statCard('ຕ່າງປະເທດຊາຍ', fwM, '#6a1b9a')}
+    </div>
+    <div style="font-size:14px;font-weight:700;color:#c0392b;margin-bottom:10px;">🚪 ສະຖິຕິການລາອອກທັງໝົດ</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;">
+      ${statCard('ລວມທັງໝົດ', resGrandTotal, '#922b21')}
+      ${statCard('ລວມລາວ', resLaoTotal, '#c0392b')}
+      ${statCard('ລາວຍິງ', resLaoF, '#e6857a')}
+      ${statCard('ລາວຊາຍ', resLaoM, '#a93226')}
+      ${statCard('ລວມຕ່າງປະເທດ', resFwTotal, '#a04000')}
+      ${statCard('ຕ່າງປະເທດຍິງ', resFwF, '#dc7633')}
+      ${statCard('ຕ່າງປະເທດຊາຍ', resFwM, '#873600')}
+    </div>`;
+}
+
 
 // ============================================================
 // MY RECORD (Company monthly update)
