@@ -430,6 +430,44 @@ function forceExcelTextColumns(ws, colIndices, totalRows) {
   }
 }
 
+// ສ້າງແບບຟອມ Excel ຕົວຢ່າງ (ຫົວຂໍ້ທາສີ, 3 ຕົວຢ່າງ, ຟອນ Phetsarath OT, ຄຳເຕືອນສີແດງຫຼັງນາມສະກຸນ) — ໃຊ້ຮ່ວມກັນທັງ 3 ແບບຟອມ (FN/FNR/LA)
+const WARNING_TEXT = ' (ຂໍ້ມູນຕົວຢ່າງໃຫ້ລຶບອອກກ່ອນອັບໂຫລດຂໍ້ມູນລົງລະບົບ)';
+async function buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx, sheetName, filename }) {
+  if (!window.ExcelJS) { alert('ກຳລັງໂຫຼດ ExcelJS, ລອງໃໝ່ອີກຄັ້ງ'); return; }
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName);
+  const FONT_NAME = 'Phetsarath OT';
+
+  ws.addRow(headers);
+  ws.getRow(1).eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A5276' } };
+    cell.font = { name: FONT_NAME, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.alignment = { vertical: 'middle', wrapText: true };
+  });
+
+  exampleRows.forEach(rowVals => {
+    const row = ws.addRow(rowVals);
+    row.eachCell((cell, colNumber) => {
+      cell.font = { name: FONT_NAME };
+      if (colNumber - 1 === lastNameColIdx) { // ExcelJS colNumber ເລີ່ມນັບຈາກ 1
+        cell.value = { richText: [
+          { text: String(rowVals[lastNameColIdx] ?? ''), font: { name: FONT_NAME } },
+          { text: WARNING_TEXT, font: { name: FONT_NAME, color: { argb: 'FFFF0000' } } },
+        ]};
+      }
+    });
+  });
+
+  headers.forEach((h, i) => { ws.getColumn(i+1).width = 24; });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
 // ============================================================
 // AUTO-RETRY: ລອງໃໝ່ອັດຕະໂນມັດຖ້າ Supabase ຊ້າ/ບໍ່ຕອບຊົ່ວຄາວ (ເຊັ່ນ ຄົນໃຊ້ພ້ອມກັນຫຼາຍ)
 // ໃຊ້ກັບ Excel bulk upload ທຸກຟັງຊັນ ເພື່ອຫຼຸດຄວາມສ່ຽງ error ຊົ່ວຄາວ
@@ -4430,14 +4468,20 @@ function fnNewModalHtml() {
 }
 
 function pageFnNew() {
+  const canExport = currentUser.role === 'admin'; // director/deputy_director/labour_chief ບໍ່ໃຫ້ດາວໂຫລດ Excel/ຮູບ ຫຼືລົງທະບຽນອີກຕໍ່ໄປ — ເບິ່ງໄດ້ພຽງລາຍການເທົ່ານັ້ນ
+  const canRegister = currentUser.role !== 'director';
   return `
   <div class="card">
     <div class="card-header" style="background:linear-gradient(135deg,#0f2942,#1a5276);border-radius:12px 12px 0 0;border-bottom:none;">
       <span class="card-title" style="color:#fff;">🆔 ລົງທະບຽນແຮງງານຕ່າງປະເທດເຂົ້າມາໃໝ່<br><span style="font-size:11px;color:#cfe0ec;font-weight:400;">New Foreign Worker Registration (FN)</span></span>
-      <button class="btn btn-success btn-sm" onclick="openFnNewModal()">+ ລົງທະບຽນໃໝ່</button>
+      <div style="display:flex;gap:8px;">
+        ${canExport ? `<button class="btn btn-secondary btn-sm" onclick="exportFnNewExcel()">📥 Excel</button>
+        <button class="btn btn-secondary btn-sm" onclick="downloadFnNewPhotosZip(event)">🖼️ ຮູບທັງໝົດ (ZIP)</button>` : ''}
+        ${canRegister ? `<button class="btn btn-success btn-sm" onclick="openFnNewModal()">+ ລົງທະບຽນໃໝ່</button>` : ''}
+      </div>
     </div>
     <div class="card-body">
-      <div id="fnNewBulkSection" style="margin-bottom:20px;"></div>
+      ${canRegister ? `<div id="fnNewBulkSection" style="margin-bottom:20px;"></div>` : ''}
       <div class="table-wrap" id="fnNewTable">
         <div style="text-align:center;color:#aaa;padding:20px;">ກຳລັງໂຫຼດ...</div>
       </div>
@@ -4454,6 +4498,7 @@ async function loadFnNew() {
   loadFnSummary('fnNewSum');  // auto-load summary for current month
   const { data: rawData, error } = await sb.from('foreign_workers').select('*').order('created_at', { ascending: false });
   const data = await attachCompanyInfo(rawData);
+  _fnNewCache = data || []; // ເກັບໄວ້ໃຫ້ exportFnNewExcel()/downloadFnNewPhotosZip() ໃຊ້
   if (error) { el.innerHTML = `<div class="alert alert-danger">❌ ${error.message}<br><span style="font-size:11px;">ກວດສອບວ່າໄດ້ Run section_c_schema.sql ໃນ Supabase ແລ້ວບໍ່</span></div>`; return; }
   if (!data || data.length === 0) { el.innerHTML = '<div style="text-align:center;color:#aaa;padding:30px;">ຍັງບໍ່ມີຂໍ້ມູນ — ກົດ "+ ລົງທະບຽນໃໝ່" ເພື່ອເລີ່ມ</div>'; return; }
   el.innerHTML = `<table><thead><tr>
@@ -5286,7 +5331,6 @@ function renderFnrBulkSection() {
 }
 
 function downloadFnrBulkTemplate() {
-  if (!window.XLSX) { alert('ກຳລັງໂຫຼດ XLSX...'); return; }
   const headers = [
     'ID ທະບຽນ ຫຼື ເລກ Passport (ຄົ້ນຫາຄົນ)', 'ຊື່ (ອ້າງອີງ)', 'ນາມສະກຸນ (ອ້າງອີງ)',
     'ເລກ Passport', 'ວັນທີອອກ Passport DD/MM/YYYY', 'ວັນໝົດ Passport DD/MM/YYYY',
@@ -5295,19 +5339,12 @@ function downloadFnrBulkTemplate() {
     'ເລກ Visa', 'ວັນທີອອກ Visa DD/MM/YYYY', 'ວັນໝົດ Visa DD/MM/YYYY',
     'ກຳນົດຢູ່ (ເດືອນ)'
   ];
-  const example = [
-    'P123456789', 'CHEN', 'WEI',
-    'P123456789', '01/01/2024', '01/01/2029',
-    'LC002', '01/08/2026', '01/08/2028', '12',
-    'RC002', '01/08/2026', '01/08/2028',
-    'V002', '01/08/2026', '01/08/2028'
+  const exampleRows = [
+    ['P123456789','CHEN','WEI','P123456789','01/01/2024','01/01/2029','LC002','01/08/2026','01/08/2028','RC002','01/08/2026','01/08/2028','V002','01/08/2026','01/08/2028','12'],
+    ['P223456789','NGUYEN','THI HOA','P223456789','01/02/2024','01/02/2029','LC003','01/09/2026','01/09/2028','RC003','01/09/2026','01/09/2028','V003','01/09/2026','01/09/2028','12'],
+    ['P323456789','KIM','MIN JUN','P323456789','01/03/2024','01/03/2029','LC004','01/10/2026','01/10/2028','RC004','01/10/2026','01/10/2028','V004','01/10/2026','01/10/2028','6'],
   ];
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-  ws['!cols'] = headers.map(() => ({ wch: 24 }));
-  forceExcelTextColumns(ws, [3,4,5,7,8,9,10,11,12,13,14], 1);
-  XLSX.utils.book_append_sheet(wb, ws, 'FNR_Bulk');
-  XLSX.writeFile(wb, 'FNR_Bulk_Template.xlsx');
+  buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx: 2, sheetName: 'FNR_Bulk', filename: 'FNR_Bulk_Template.xlsx' });
 }
 
 async function handleFnrBulkExcel(file) {
@@ -5477,7 +5514,6 @@ function renderFnNewBulkSection() {
 }
 
 function downloadFnNewBulkTemplate() {
-  if (!window.XLSX) { alert('ກຳລັງໂຫຼດ XLSX...'); return; }
   const headers = [
     'ຄຳນຳໜ້າ (Mr/Ms)', 'ຊື່ (firstname)', 'ນາມສະກຸນ (lastname)',
     'ສັນຊາດ (nationality)', 'ເພດ (ຊາຍ/ຍິງ)', 'ຕຳແໜ່ງ (position)',
@@ -5489,20 +5525,12 @@ function downloadFnNewBulkTemplate() {
     'ເລກ Visa', 'ວັນທີອອກ Visa DD/MM/YYYY', 'ວັນໝົດ Visa DD/MM/YYYY',
     'ວັນທີເລີ່ມເຮັດວຽກແທ້ຈິງ DD/MM/YYYY (ຖ້າຮູ້ — ໃຊ້ຄິດໄລ່ອາຍຸການເຮັດວຽກ)'
   ];
-  const example = [
-    'Mr','ສົມ','ສຸທາ','ຫວຽດນາມ','ຊາຍ','ຊ່າງ','3500000','01/01/1990',
-    'P123456789','01/01/2022','01/01/2027',
-    'LC001','01/03/2023','01/03/2025','12',
-    'RC001','01/03/2023','01/03/2025',
-    'V001','01/03/2023','01/03/2025',
-    '15/06/2020'
+  const exampleRows = [
+    ['Mr','ສົມ','ສຸທາ','ຫວຽດນາມ','ຊາຍ','ຊ່າງ','3500000','01/01/1990','P123456789','01/01/2022','01/01/2027','LC001','01/03/2023','01/03/2025','12','RC001','01/03/2023','01/03/2025','V001','01/03/2023','01/03/2025','15/06/2020'],
+    ['Ms','ນາງ ວັນນາ','ພັນຍາ','ຫວຽດນາມ','ຍິງ','ພະນັກງານ','3200000','12/05/1992','P223456789','01/02/2022','01/02/2027','LC002','01/04/2023','01/04/2025','12','RC002','01/04/2023','01/04/2025','V002','01/04/2023','01/04/2025','01/07/2020'],
+    ['Mr','ບຸນ','ໄຊຍະສອນ','ຈີນ','ຊາຍ','ວິສະວະກອນ','4500000','23/09/1988','P323456789','01/03/2022','01/03/2027','LC003','01/05/2023','01/05/2025','12','RC003','01/05/2023','01/05/2025','V003','01/05/2023','01/05/2025','15/08/2020'],
   ];
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-  ws['!cols'] = headers.map(() => ({ wch: 24 }));
-  forceExcelTextColumns(ws, [7,9,10,12,13,16,17,19,20,21], 1);
-  XLSX.utils.book_append_sheet(wb, ws, 'FN_New_Bulk');
-  XLSX.writeFile(wb, 'FN_New_Bulk_Template.xlsx');
+  buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx: 2, sheetName: 'FN_New_Bulk', filename: 'FN_New_Bulk_Template.xlsx' });
 }
 
 async function handleFnNewBulkExcel(file) {
@@ -6147,25 +6175,24 @@ async function generateLetterFromSelected() {
       window._currentFwQuotaInfo     = quotaInfo; // {no, date, file} — ຕື່ມຈາກປັອບອັບ, ບໍ່ໄດ້ດຶງຈາກໂປຣໄຟລ໌ບໍລິສັດອີກຕໍ່ໄປ
       window._currentFwTaxInfo       = taxInfo;   // {no, date, file} — ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ
 
-      // Fire-and-forget: save to DB in background — never block on this
-      (async () => {
-        try {
-          await sb.from('fw_requests').insert({
-            company_id: currentUser.companyId,
-            request_type: type,
-            workers: selectedWorkers,
-            male_count: maleCount,
-            female_count: femaleCount,
-            quota_no: quotaInfo.no,
-            quota_date: quotaInfo.date,
-            quota_file: quotaInfo.file,
-            tax_cert_no: taxInfo.no,
-            tax_cert_date: taxInfo.date,
-            tax_cert_file: taxInfo.file,
-            doc_no: window_docNo
-          });
-        } catch(e) { /* ignore */ }
-      })();
+      // ບັນທຶກລົງ DB ກ່ອນ (ຕ້ອງລໍເພື່ອໄດ້ ID ຄືນມາ ສຳລັບບັນທຶກໜັງສືສະເໜີສະບັບຈິງທີ່ຈະສ້າງຕໍ່ໄປ)
+      try {
+        const { data: insertedRow } = await sb.from('fw_requests').insert({
+          company_id: currentUser.companyId,
+          request_type: type,
+          workers: selectedWorkers,
+          male_count: maleCount,
+          female_count: femaleCount,
+          quota_no: quotaInfo.no,
+          quota_date: quotaInfo.date,
+          quota_file: quotaInfo.file,
+          tax_cert_no: taxInfo.no,
+          tax_cert_date: taxInfo.date,
+          tax_cert_file: taxInfo.file,
+          doc_no: window_docNo
+        }).select().single();
+        window._currentFwRequestDbId = insertedRow?.id || null;
+      } catch(e) { window._currentFwRequestDbId = null; }
 
       // Open official documents immediately
       printFwRequestLetter();
@@ -6658,6 +6685,64 @@ function pageLaoWorkers() {
 }
 
 let _laoWorkersCache = [];
+let _fnNewCache = []; // ໃຊ້ໂດຍ exportFnNewExcel()/downloadFnNewPhotosZip()
+
+// ດາວໂຫລດຂໍ້ມູນແຮງງານຕ່າງປະເທດ (FN) ເປັນ Excel — ສະເພາະ director/deputy_director/labour_chief/admin
+function exportFnNewExcel() {
+  if (!_fnNewCache.length) { alert('ບໍ່ມີຂໍ້ມູນໃຫ້ດາວໂຫລດ'); return; }
+  const rows = _fnNewCache.map(w => ({
+    'ID ທະບຽນ': w.reg_id || '',
+    'ຊື່': `${w.prefix||''} ${w.firstname||''} ${w.lastname||''}`.trim(),
+    'ບໍລິສັດ': w.companies?.username || '',
+    'ຊື່ບໍລິສັດ': w.companies?.name_lao || '',
+    'ສັນຊາດ': w.nationality || '',
+    'ເພດ': w.gender || '',
+    'ວັນເດືອນປີເກີດ': w.dob || '',
+    'ຕຳແໜ່ງ': w.position || '',
+    'ເລກທີ່ໜັງສືຜ່ານແດນ': w.passport_no || '',
+    'ໝົດອາຍຸໜັງສືຜ່ານແດນ': w.passport_expiry || '',
+    'ເລກທີ່ບັດແຮງງານ': w.labour_card_no || '',
+    'ໝົດອາຍຸບັດແຮງງານ': w.labour_card_expiry || '',
+    'ກຳນົດຢູ່ (ເດືອນ)': w.stay_duration || '',
+    'ວັນທີເລີ່ມ': w.start_date || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'FN Workers');
+  XLSX.writeFile(wb, `FN_ແຮງງານຕ່າງປະເທດ_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ດາວໂຫລດຮູບພະນັກງານທັງໝົດເປັນ ZIP — ສະເພາະ director/deputy_director/labour_chief/admin
+async function downloadFnNewPhotosZip(ev) {
+  const withPhotos = _fnNewCache.filter(w => w.photo_path);
+  if (!withPhotos.length) { alert('ບໍ່ມີຮູບພະນັກງານໃຫ້ດາວໂຫລດ'); return; }
+  if (!confirm(`ດາວໂຫລດຮູບທັງໝົດ ${withPhotos.length} ຮູບ ເປັນໄຟລ໌ ZIP ດຽວ?`)) return;
+  const btn = ev?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ ກຳລັງກຽມໄຟລ໌...'; }
+  try {
+    const zip = new JSZip();
+    for (const w of withPhotos) {
+      try {
+        const url = sb.storage.from('foreign-worker-docs').getPublicUrl(w.photo_path).data.publicUrl;
+        const resp = await fetch(url);
+        if (!resp.ok) continue;
+        const blob = await resp.blob();
+        const ext = (w.photo_path.split('.').pop() || 'jpg').split('?')[0];
+        zip.file(`${w.reg_id || w.id}.${ext}`, blob);
+      } catch(e) { /* ຂ້າມຮູບທີ່ດາວໂຫລດບໍ່ໄດ້ */ }
+    }
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = `FN_ຮູບພະນັກງານ_${new Date().toISOString().slice(0,10)}.zip`;
+    a.click();
+  } catch(e) {
+    alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🖼️ ຮູບທັງໝົດ (ZIP)'; }
+  }
+}
+
 
 async function loadLaoWorkers() {
   const el = document.getElementById('laoWorkerTable');
@@ -6939,11 +7024,13 @@ async function deleteLaoWorker(id) {
 }
 
 function downloadLaoWorkerTemplate() {
-  const header = 'ຄຳນຳໜ້າ,ຊື່,ນາມສະກຸນ,ເພດ,ວຸດທິການສຶກສາ,ຕຳແໜ່ງ,ສະຖານະ,ໄລຍະຝຶກງານ(ວັນ),ວັນທີເຂົ້າ DD/MM/YYYY,ມາຈາກແຂວງ,ວັນທີລົງທະບຽນ DD/MM/YYYY';
-  const example = 'ທ້າວ,ສົມໃຈ,ວົງສຸຂ,ຊາຍ,ປະລິຍາຕີ,ພະນັກງານ,ຖາວອນ,,15/01/2024,ແຂວງສະຫວັນນະເຂດ,15/01/2024';
-  const blob = new Blob(['\uFEFF'+header+'\n'+example], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'lao_worker_template.csv'; a.click();
+  const headers = ['ຄຳນຳໜ້າ','ຊື່','ນາມສະກຸນ','ເພດ','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ','ສະຖານະ','ໄລຍະຝຶກງານ(ວັນ)','ວັນທີເຂົ້າ DD/MM/YYYY','ມາຈາກແຂວງ','ວັນທີລົງທະບຽນ DD/MM/YYYY'];
+  const exampleRows = [
+    ['ທ້າວ','ສົມໃຈ','ວົງສຸຂ','ຊາຍ','ປະລິຍາຕີ','ພະນັກງານ','ຖາວອນ','','15/01/2024','ແຂວງສະຫວັນນະເຂດ','15/01/2024'],
+    ['ນາງ','ສີດາ','ພົມມະວົງ','ຍິງ','ຊັ້ນສູງ','ບັນຊີ','ຖາວອນ','','20/02/2024','ແຂວງຈຳປາສັກ','20/02/2024'],
+    ['ທ້າວ','ບຸນມີ','ໄຊຍະລາດ','ຊາຍ','ມັດທະຍົມປາຍ','ຄົນຂັບລົດ','ຝຶກງານ','90','01/03/2024','ແຂວງວຽງຈັນ','01/03/2024'],
+  ];
+  buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx: 2, sheetName: 'LA_Workers', filename: 'lao_worker_template.xlsx' });
 }
 
 async function handleLaoWorkerExcel(file) {
@@ -7267,6 +7354,11 @@ function printFwRequestLetter() {
   <div style="text-align:right;padding-right:80px;font-size:12pt;margin-top:60px;color:transparent;">.</div>
 </div>`;
 
+  // ບັນທຶກໜັງສືສະເໜີສະບັບຈິງ (doc1) ໄວ້ໃນ DB ແບບ snapshot — ໃຫ້ແອັດມິນເຫັນສະບັບທີ່ບໍລິສັດສ້າງແທ້ໆ ບໍ່ແມ່ນສ້າງໃໝ່ຄືນ (ຫ້າມແປງເນື້ອໃນ)
+  if (window._currentFwRequestDbId) {
+    sb.from('fw_requests').update({ letter_html: doc1 }).eq('id', window._currentFwRequestDbId).then(()=>{}).catch(()=>{});
+  }
+
   // ---- ເອກະສານທີ 2: ລາຍຊື່ພະນັກງານ (A4 landscape) ----
   const doc2Title = isNew
     ? `ລາຍຊື່ພະນັກງານຕ່າງປະເທດຂອງບໍລິສັດ ${esc(co.name_lao||'')} ຂໍຢັ້ງຢືນການນຳເຂົ້າ`
@@ -7530,7 +7622,11 @@ async function viewFwRequest(id) {
         : `<div style="font-size:12px;color:#aaa;">ຕ້ອງກວດເອກະສານໃຫ້ຄົບ 3 ຂໍ້ຂ້າງເທິງກ່ອນ ຈຶ່ງຈະອະນຸມັດຂັ້ນສຸດທ້າຍໄດ້</div>`}
     </div>`;
 
-  document.getElementById('fwReqViewBody').innerHTML = buildFwTrackerHtml(r) + docsHtml + companyDocsHtml + finalActionsHtml + buildFwRequestLetterHtml(r);
+  // ໃຊ້ໜັງສືສະເໜີສະບັບຈິງທີ່ບໍລິສັດສ້າງ (snapshot, ຫ້າມແປງເນື້ອໃນ) ຖ້າມີ — ຖ້າເປັນຄຳຂໍເກົ່າກ່ອນຈະມີຄຸນສົມບັດນີ້ ຈຶ່ງໃຫ້ສ້າງຄືນຈາກຂໍ້ມູນທົດແທນ
+  const letterHtml = r.letter_html
+    ? `<div style="border:2px solid #1a5276;border-radius:10px;padding:16px;background:#fff;">${r.letter_html}</div>`
+    : buildFwRequestLetterHtml(r);
+  document.getElementById('fwReqViewBody').innerHTML = buildFwTrackerHtml(r) + docsHtml + companyDocsHtml + finalActionsHtml + letterHtml;
   document.getElementById('fwReqViewModal').classList.add('show');
 }
 
