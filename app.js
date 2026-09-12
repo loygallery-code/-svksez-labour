@@ -372,7 +372,7 @@ function buildSidebar() {
       ${isAdmin ? `<li><a href="#" onclick="loadPage('manageUsers')"><span class="icon">👥</span>ຈັດການ Users</a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('auditLog')"><span class="icon">🕵️</span>Audit Log<span id="auditNotifBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('companyArchive')"><span class="icon">🗄️</span>ຄັງຂໍ້ມູນບໍລິສັດ</a></li>` : ''}
-      ${isAdmin ? `<li><a href="#" onclick="loadPage('emailWebmail')"><span class="icon">📧</span>ອີເມວ (SEZA)</a></li>` : ''}
+      ${isAdmin ? `<li><a href="https://email.godaddy.com" target="_blank" rel="noopener"><span class="icon">📧</span>ອີເມວ (SEZA) ↗️</a></li>` : ''}
       <li><div class="sidebar-section">ສະຖິຕິ</div></li>
       <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>ແຮງງານທັງໝົດ</a></li>
       <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>ແຮງງານຕ່າງປະເທດ</a></li>
@@ -796,7 +796,6 @@ function loadPage(page, pushState=true) {
     case 'dashboard': content.innerHTML = pageDashboard(); break;
     case 'companies': content.innerHTML = pageCompanies(); loadCompanyTable(); break;
     case 'companyArchive': content.innerHTML = pageCompanyArchive(); loadCompanyArchive(); break;
-    case 'emailWebmail': content.innerHTML = pageEmailWebmail(); break;
     case 'manageUsers': content.innerHTML = pageManageUsers(); loadManageUsers(); break;
     case 'summary51': content.innerHTML = pageSummary51(); loadSummary51(); break;
     case 'summary52': content.innerHTML = pageSummary52(); loadSummary52(); break;
@@ -1464,22 +1463,6 @@ function pageCompanies() {
   </div>`;
 }
 
-// ---- ADMIN ONLY: ອີເມວ (ທົດສອບຝັງ Webmail ໄວ້ໃນລະບົບ ຜ່ານ iframe) ----
-function pageEmailWebmail() {
-  return `
-  <div class="card">
-    <div class="card-header" style="background:linear-gradient(135deg,#3a3a3a,#1a1a1a);border-radius:12px 12px 0 0;border-bottom:none;">
-      <span class="card-title" style="color:#fff;">📧 ອີເມວ SEZA<br><span style="font-size:11px;color:#ccc;font-weight:400;">Webmail (@seza-svk.la)</span></span>
-      <a href="https://email.godaddy.com" target="_blank" class="btn btn-secondary btn-sm">↗️ ເປີດໃນແທັບໃໝ່</a>
-    </div>
-    <div class="card-body" style="padding:0;">
-      <div id="webmailNotice" style="padding:14px 18px;background:#fff7e6;border-bottom:1px solid #f0e0b0;font-size:13px;color:#7a5c00;">
-        ⏳ ກຳລັງທົດລອງໂຫລດ Webmail ໄວ້ໃນໜ້ານີ້... ຖ້າຫວ່າງເປົ່າຫຼັງ 5 ວິນາທີ ແປວ່າຝັງບໍ່ໄດ້ (GoDaddy/Titan ບລັອກໄວ້) — ໃຫ້ກົດ "↗️ ເປີດໃນແທັບໃໝ່" ຂ້າງເທິງແທນ
-      </div>
-      <iframe id="webmailFrame" src="https://email.godaddy.com" style="width:100%;height:75vh;border:none;display:block;" onload="document.getElementById('webmailNotice').style.display='none';"></iframe>
-    </div>
-  </div>`;
-}
 
 // ---- ADMIN ONLY: ຄັງຂໍ້ມູນບໍລິສັດ — ເກັບຂໍ້ມູນບໍລິສັດທັງໝົດ (ເຄື່ອນໄຫວ/ຖືກລະງັບ/ຖືກລຶບ) ພ້ອມຄົ້ນຫາ ແລະ ພິມລາຍງານ ----
 function pageCompanyArchive() {
