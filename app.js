@@ -278,6 +278,13 @@ async function initApp() {
     currentUser.role === 'print_only' ? '🖨️ ຜູ້ຊ່ວຍແອັດມີນ' :
     currentUser.role === 'viewer' ? '👁️ ' + currentUser.companyData?.name_lao :
     '🏭 ' + currentUser.companyName;
+
+  // ສະແດງ badge ເຕືອນອັດຕະໂນມັດ ຖ້າ login ດ້ວຍບັນຊີບໍລິສັດທົດສອບ (ຊື່ຂຶ້ນຕົ້ນ "ທົດສອບ-")
+  const testBanner = document.getElementById('testModeBanner');
+  if (testBanner) {
+    const nameLao = currentUser.companyName || currentUser.companyData?.name_lao || '';
+    testBanner.style.display = nameLao.startsWith('ທົດສອບ-') ? 'block' : 'none';
+  }
   // Show print report button for admin, director, viewer, print_only
   const prBtn = document.getElementById('printReportNavBtn');
   if (prBtn) prBtn.style.display = (currentUser.role === 'admin' || currentUser.role === 'director' || currentUser.role === 'viewer' || currentUser.role === 'print_only') ? '' : 'none';
@@ -1559,7 +1566,7 @@ async function loadCompanyArchive() {
     </tr></thead><tbody>${filtered.map(c => `
       <tr>
         <td style="padding:8px;">${esc(c.username||'')}</td>
-        <td style="padding:8px;">${esc(c.name_lao||'')}</td>
+        <td style="padding:8px;">${esc(c.name_lao||'')}${(c.name_lao||'').startsWith('ທົດສອບ-') ? ' <span style="background:#c0392b;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;">🧪 ທົດສອບ</span>' : ''}</td>
         <td style="padding:8px;">ເຂດ ${esc(c.zone||'-')}</td>
         <td style="padding:8px;">${statusBadge(c)}</td>
         <td style="padding:8px;text-align:center;">${c.lao_count}</td>
@@ -1623,7 +1630,7 @@ async function loadCompanyTable() {
       : '';
     return `<tr style="${isActive ? '' : 'opacity:0.55;background:#f8f8f8;'}">
       <td><b>${esc(c.username)}</b></td>
-      <td>${esc(c.name_lao)}</td>
+      <td>${esc(c.name_lao)}${(c.name_lao||'').startsWith('ທົດສອບ-') ? ' <span style="background:#c0392b;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;">🧪 ທົດສອບ</span>' : ''}</td>
       <td>${esc(c.name_eng)}</td>
       <td>ເຂດ ${c.zone}</td>
       <td>****</td>
