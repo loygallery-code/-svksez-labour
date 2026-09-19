@@ -813,14 +813,15 @@ async function checkNotifications() {
           const exp = new Date(w.passport_expiry);
           const warn180 = new Date(today); warn180.setDate(warn180.getDate() + 180);
           const key = `pp_${w.id}`;
+          const detail = { docLabel: 'ໜັງສືເດີນທາງ (Passport)', personName: name, companyUsername: currentUser.companyName || '', expiryDate: w.passport_expiry };
           if (exp <= warn180 && exp > today && !seen.has(key)) {
             notifications.push({ type: 'warning', key,
               msg: `🛂 ໜັງສືເດີນທາງ ຂອງພະນັກງານ ${name} ແມ່ນຈະໝົດອາຍຸໃນອີກ 6 ເດືອນຂ້າງໜ້າແລ້ວ ກະລຸນາແຈ້ງໃຫ້ຜູ້ກ່ຽວຊາບດ້ວຍ`,
-              page: 'fwRequestCompany' });
+              page: 'fwRequestCompany', detail });
           } else if (exp <= today && !seen.has(key+'_exp')) {
             notifications.push({ type: 'danger', key: key+'_exp',
               msg: `🛂 ໜັງສືເດີນທາງ ຂອງພະນັກງານ ${name} ໝົດອາຍຸແລ້ວ`,
-              page: 'fwRequestCompany' });
+              page: 'fwRequestCompany', detail });
           }
         }
 
@@ -834,14 +835,15 @@ async function checkNotifications() {
           const exp = new Date(w[field]);
           const warn21 = new Date(today); warn21.setDate(warn21.getDate() + 21);
           const key = `${pfx}_${w.id}`;
+          const detail = { docLabel: label.replace(/^\S+\s/, ''), personName: name, companyUsername: currentUser.companyName || '', expiryDate: w[field] };
           if (exp <= warn21 && exp > today && !seen.has(key)) {
             notifications.push({ type: 'warning', key,
               msg: `${label} ຂອງພະນັກງານ ${name} ຈະໝົດອາຍຸການໃຊ້ງານແລ້ວ ກະລຸນາຂຶ້ນທະບຽນຂໍຕໍ່ເອກະສານດ້ວຍ`,
-              page: 'fwRequestCompany' });
+              page: 'fwRequestCompany', detail });
           } else if (exp <= today && !seen.has(key+'_exp')) {
             notifications.push({ type: 'danger', key: key+'_exp',
               msg: `${label} ຂອງພະນັກງານ ${name} ໝົດອາຍຸແລ້ວ`,
-              page: 'fwRequestCompany' });
+              page: 'fwRequestCompany', detail });
           }
         });
       });
