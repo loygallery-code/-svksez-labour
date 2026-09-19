@@ -746,31 +746,42 @@ async function checkNotifications() {
     }
   }
 
-  // Labour card 15 days (Section C foreign worker registry)
+  // ---- Admin/Director-side: ແຈ້ງເຕືອນເອກະສານພະນັກງານຕ່າງປະເທດໃກ້ໝົດອາຍຸ ທົ່ວທັງລະບົບ (ທຸກບໍລິສັດ active) — ໃຊ້ເກນເວລາດຽວກັນກັບຝັ່ງບໍລິສັດ ເພື່ອຄວາມສອດຄ່ອງກັນ
   if (currentUser.role === 'admin' || currentUser.role === 'director') {
-    const { data: workers } = await sb.from('foreign_workers').select('*, companies(id,username)');
+    const activeIds = new Set(activeCompanies.map(c => c.id));
+    const { data: workers } = await sb.from('foreign_workers').select('id,firstname,lastname,company_id,passport_expiry,labour_card_expiry,residence_card_expiry,visa_expiry, companies(id,username)');
     if (workers) {
       workers.forEach(w => {
-        if (w.labour_card_expiry) {
-          const exp = new Date(w.labour_card_expiry);
-          const warn = new Date(exp);
-          warn.setDate(warn.getDate() - 15);
-          if (warn <= today && exp > today) {
-            notifications.push({ 
-              type: 'warning', 
-              msg: `🪪 ບັດແຮງງານ ${esc(w.firstname)} ${esc(w.lastname)} (${esc(w.companies?.username)}) ຈະໝົດອາຍຸໃນ 15 ວັນ`,
-              companyId: w.companies?.id,
-              page: 'fnNew'
-            });
-          } else if (exp <= today) {
-            notifications.push({ 
-              type: 'danger', 
-              msg: `🪪 ບັດແຮງງານ ${esc(w.firstname)} ${esc(w.lastname)} (${esc(w.companies?.username)}) ໝົດອາຍຸແລ້ວ`,
-              companyId: w.companies?.id,
-              page: 'fnNew'
-            });
+        if (!activeIds.has(w.company_id)) return; // ບໍ່ນັບບໍລິສັດທີ່ຖືກລະງັບ/ລຶບ
+        const name = `${esc(w.firstname||'')} ${esc(w.lastname||'')}`.trim();
+        const uname = esc(w.companies?.username || '');
+
+        // ໜັງສືເດີນທາງ: ແຈ້ງລ່ວງໜ້າ 6 ເດືອນ
+        if (w.passport_expiry) {
+          const exp = new Date(w.passport_expiry);
+          const warn180 = new Date(today); warn180.setDate(warn180.getDate() + 180);
+          if (exp <= today) {
+            notifications.push({ type: 'danger', msg: `🛂 ໜັງສືເດີນທາງ ${name} (${uname}) ໝົດອາຍຸແລ້ວ`, companyId: w.company_id, page: 'fnNew' });
+          } else if (exp <= warn180) {
+            notifications.push({ type: 'warning', msg: `🛂 ໜັງສືເດີນທາງ ${name} (${uname}) ຈະໝົດອາຍຸໃນ 6 ເດືອນ`, companyId: w.company_id, page: 'fnNew' });
           }
         }
+
+        // ບັດແຮງງານ, ບັດພັກເຊົາ, ວີຊ່າ: ແຈ້ງລ່ວງໜ້າ 21 ວັນ
+        [
+          ['labour_card_expiry', '🪪 ບັດແຮງງານ'],
+          ['residence_card_expiry', '🏠 ບັດພັກເຊົາ'],
+          ['visa_expiry', '🛂 ວີຊ່າ'],
+        ].forEach(([field, label]) => {
+          if (!w[field]) return;
+          const exp = new Date(w[field]);
+          const warn21 = new Date(today); warn21.setDate(warn21.getDate() + 21);
+          if (exp <= today) {
+            notifications.push({ type: 'danger', msg: `${label} ${name} (${uname}) ໝົດອາຍຸແລ້ວ`, companyId: w.company_id, page: 'fnNew' });
+          } else if (exp <= warn21) {
+            notifications.push({ type: 'warning', msg: `${label} ${name} (${uname}) ຈະໝົດອາຍຸໃນ 21 ວັນ`, companyId: w.company_id, page: 'fnNew' });
+          }
+        });
       });
     }
   }
