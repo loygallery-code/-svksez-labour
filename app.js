@@ -5391,6 +5391,8 @@ async function saveFnRenewal() {
   finally { const b2 = document.querySelector('#fnrModalBody .btn-primary'); if (b2) { b2.disabled = false; b2.textContent = '💾 ບັນທຶກຂໍ້ມູນ'; } }
 }
 
+let _fnrHistoryCache = [];
+
 async function loadFnrHistory() {
   const el = document.getElementById('fnrHistoryTable');
   if (!el) return;
@@ -5399,6 +5401,23 @@ async function loadFnrHistory() {
   const { data: rawData, error } = await q;
   if (error) { el.innerHTML = `<div class="alert alert-danger">❌ ${error.message}</div>`; return; }
   const data = await attachCompanyInfo(rawData);
+  _fnrHistoryCache = data || [];
+  renderFnrHistoryTable(_fnrHistoryCache);
+}
+
+function filterFnrHistory() {
+  const q = (document.getElementById('fnrHistSearchQ')?.value || '').trim().toLowerCase();
+  if (!q) { renderFnrHistoryTable(_fnrHistoryCache); return; }
+  const filtered = _fnrHistoryCache.filter(r =>
+    `${r.firstname||''} ${r.lastname||''}`.toLowerCase().includes(q) ||
+    String(r.reg_id||'').toLowerCase().includes(q)
+  );
+  renderFnrHistoryTable(filtered);
+}
+
+function renderFnrHistoryTable(data) {
+  const el = document.getElementById('fnrHistoryTable');
+  if (!el) return;
   if (!data || data.length === 0) { el.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;">ຍັງບໍ່ມີປະຫວັດການຕໍ່ອາຍຸ</div>'; return; }
   el.innerHTML = `<table><thead><tr>
     <th>ID ທະບຽນ (ຄົງທີ່)</th><th>ຊື່-ນາມສະກຸນ</th><th>ບໍລິສັດ</th><th>ຕໍ່ອາຍຸຄັ້ງທີ</th><th>ວັນທີຕໍ່ອາຍຸ</th><th>ຈັດການ</th>
@@ -5412,6 +5431,31 @@ async function loadFnrHistory() {
       <td><button class="btn btn-info btn-sm" onclick="printFnRenewal('${r.id}')">🖨️ ພິມ</button></td>
     </tr>`).join('')}
   </tbody></table>`;
+}
+
+// ພິມເນື້ອຫາພາຍໃນ element ໃດໜຶ່ງ (ຕາຕະລາງ/ສະຫຼຸບ) — ໃຊ້ຮ່ວມກັນຫຼາຍໜ້າ (ສະຫຼຸບ FN, ແຮງງານລາວ, ບັນທຶກການລາອອກ)
+function printSection(elementId, title) {
+  const el = document.getElementById(elementId);
+  if (!el || !el.innerHTML.trim()) { alert('ບໍ່ມີຂໍ້ມູນໃຫ້ພິມ'); return; }
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>${title}</title>
+    <style>
+      body { font-family: 'Phetsarath OT', sans-serif; padding: 20px; }
+      h2 { text-align:center; color:#1a3a5c; }
+      table { width:100%; border-collapse: collapse; font-size:13px; margin-top:14px; }
+      th, td { border:1px solid #999; padding:6px 8px; text-align:left; }
+      th { background:#1a5276; color:#fff; }
+      @media print { body { padding: 0; } }
+    </style>
+    </head><body>
+    <h2>${title}</h2>
+    <div style="text-align:center;font-size:12px;color:#666;margin-bottom:10px;">ພິມວັນທີ: ${laoDate(new Date().toISOString())}</div>
+    ${el.innerHTML}
+    </body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
 }
 
 async function printFnRenewal(renewalId) {
@@ -5470,6 +5514,11 @@ function pageFwNewWorkers() {
     </div>
     <div class="card-body">
       <div id="fnNewBulkSection" style="margin-bottom:20px;"></div>
+      <div style="margin-bottom:14px;">
+        <input type="text" id="fnNewSearchQ" placeholder="🔍 ຄົ້ນຫາ ຊື່, ID ທະບຽນ, ສັນຊາດ..." autocomplete="off"
+          style="width:100%;max-width:360px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-family:inherit;"
+          oninput="filterFwNewWorkers()">
+      </div>
       <div class="table-wrap" id="companyFnTable"><div style="text-align:center;color:#aaa;padding:30px;">ກຳລັງໂຫຼດ...</div></div>
     </div>
   </div>
@@ -5506,6 +5555,8 @@ function pageFwNewWorkers() {
   ${fnNewModalHtml()}`;
 }
 
+let _fnNewWorkersCache = [];
+
 async function loadFwNewWorkers() {
   const el = document.getElementById('companyFnTable');
   if (!el) return;
@@ -5517,11 +5568,13 @@ async function loadFwNewWorkers() {
   // Use reg_id prefix only (no status column dependency)
   const fnWorkers  = data.filter(w => !String(w.reg_id||'').startsWith('FNR'));
   const fnrWorkers = data.filter(w =>  String(w.reg_id||'').startsWith('FNR'));
+  _fnNewWorkersCache = fnWorkers;
 
   const fnrBanner = fnrWorkers.length > 0 ? `<div class="alert" style="background:#eaf4ff;border-left:4px solid #2980b9;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;">
     🔄 ມີ <b>${fnrWorkers.length} ຄົນ</b> ຖືກ re-register ເປັນ <b>FNR</b> ແລ້ວ — ສາມາດຄົ້ນຫາໄດ້ໃນໜ້າ "ແຮງງານຕ່າງປະເທດຂໍຕໍ່ເອກະສານ"
     <button class="btn btn-secondary btn-sm" style="margin-left:10px;" onclick="loadPage('fwRenewDocs')">ໄປໜ້ານັ້ນ →</button>
   </div>` : '';
+  el.dataset.fnrBanner = fnrBanner;
 
   if (fnWorkers.length === 0) {
     el.innerHTML = fnrBanner + '<div style="text-align:center;color:#aaa;padding:20px;">ແຮງງານ FN ທຸກຄົນໄດ້ຍ້າຍໄປ FNR ແລ້ວ</div>';
@@ -5530,6 +5583,31 @@ async function loadFwNewWorkers() {
     return;
   }
 
+  renderFwNewWorkersTable(fnWorkers, fnrBanner);
+  // cache for letter panel
+  const { data: all } = await sb.from('foreign_workers').select('*').eq('company_id', currentUser.companyId).order('firstname');
+  _fnAllWorkersCache = await attachCompanyInfo(all || []);
+}
+
+function filterFwNewWorkers() {
+  const q = (document.getElementById('fnNewSearchQ')?.value || '').trim().toLowerCase();
+  const fnrBanner = document.getElementById('companyFnTable')?.dataset.fnrBanner || '';
+  if (!q) { renderFwNewWorkersTable(_fnNewWorkersCache, fnrBanner); return; }
+  const filtered = _fnNewWorkersCache.filter(w =>
+    `${w.firstname||''} ${w.lastname||''}`.toLowerCase().includes(q) ||
+    String(w.reg_id||'').toLowerCase().includes(q) ||
+    String(w.nationality||'').toLowerCase().includes(q)
+  );
+  renderFwNewWorkersTable(filtered, fnrBanner);
+}
+
+function renderFwNewWorkersTable(fnWorkers, fnrBanner) {
+  const el = document.getElementById('companyFnTable');
+  if (!el) return;
+  if (fnWorkers.length === 0) {
+    el.innerHTML = fnrBanner + '<div style="text-align:center;color:#aaa;padding:20px;">ບໍ່ພົບຂໍ້ມູນ</div>';
+    return;
+  }
   el.innerHTML = fnrBanner + `<table><thead><tr>
     <th>ຮູບ</th><th>ID ທະບຽນ</th><th>ຊື່-ນາມສະກຸນ</th><th>ສັນຊາດ</th><th>ເພດ</th>
     <th>ບັດແຮງງານ</th><th>ໜັງສືເດີນທາງ</th><th>ຈັດການ</th>
@@ -5558,9 +5636,6 @@ async function loadFwNewWorkers() {
       </tr>`;
     }).join('')}
   </tbody></table>`;
-  // cache for letter panel
-  const { data: all } = await sb.from('foreign_workers').select('*').eq('company_id', currentUser.companyId).order('firstname');
-  _fnAllWorkersCache = await attachCompanyInfo(all || []);
 }
 
 // navigate to FNR page and pre-fill search (ບໍ່ຟ້າວເປີດ form ຕໍ່ອາຍຸໃຫ້ອັດຕະໂນມັດ — ໃຫ້ບໍລິສັດກົດເລືອກເອງ)
@@ -5599,6 +5674,11 @@ function pageFwRenewDocs() {
 
       <!-- Renewal history -->
       <div class="section-title mt-4">ປະຫວັດການຕໍ່ອາຍຸ</div>
+      <div style="margin-bottom:10px;">
+        <input type="text" id="fnrHistSearchQ" placeholder="🔍 ຄົ້ນຫາປະຫວັດ ຊື່ ຫຼື ID ທະບຽນ..." autocomplete="off"
+          style="width:100%;max-width:360px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-family:inherit;"
+          oninput="filterFnrHistory()">
+      </div>
       <div class="table-wrap" id="fnrHistoryTable"><div style="text-align:center;color:#aaa;padding:20px;">ກຳລັງໂຫຼດ...</div></div>
     </div>
   </div>
@@ -6336,6 +6416,11 @@ function pageFwRequestCompany() {
           <div id="fnrSearchList" class="autocomplete-list" style="display:none;position:absolute;z-index:50;background:#fff;width:100%;border:1px solid #ddd;border-radius:8px;max-height:240px;overflow-y:auto;"></div>
         </div>
         <div class="section-title mt-4">ປະຫວັດການຕໍ່ອາຍຸ</div>
+        <div style="margin-bottom:10px;">
+          <input type="text" id="fnrHistSearchQ" placeholder="🔍 ຄົ້ນຫາປະຫວັດ ຊື່ ຫຼື ID ທະບຽນ..." autocomplete="off"
+            style="width:100%;max-width:360px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-family:inherit;"
+            oninput="filterFnrHistory()">
+        </div>
         <div class="table-wrap" id="fnrHistoryTable"><div style="text-align:center;color:#aaa;padding:20px;">ກຳລັງໂຫຼດ...</div></div>
       </div>
     </div>
@@ -6709,6 +6794,7 @@ function pageMyFwSummary() {
     <div class="card-header" style="background:linear-gradient(135deg,#0f2942,#1a5276);border-radius:12px 12px 0 0;border-bottom:none;">
       <span class="card-title" style="color:#fff;">📊 ສະຫຼຸບການລົງທະບຽນແຮງງານຕ່າງປະເທດ<br>
         <span style="font-size:11px;color:#cfe0ec;font-weight:400;">Section C Summary — Foreign Worker Registration</span></span>
+      <button class="btn btn-secondary btn-sm" onclick="printSection('myFwSumResult','ສະຫຼຸບການລົງທະບຽນແຮງງານຕ່າງປະເທດ')">🖨️ ພິມ</button>
     </div>
     <div class="card-body">
       <!-- Employee Search -->
@@ -6939,6 +7025,7 @@ function pageLaoWorkers() {
       <span class="card-title" style="color:#fff;">🇱🇦 ລົງທະບຽນແຮງງານລາວ — ຂໍ້ 3 ສ່ວນ C<br>
         <span style="font-size:11px;color:#cfe0ec;font-weight:400;">Section C.3 — Lao Worker Registration</span></span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="printSection('laoWorkerTable','ລົງທະບຽນແຮງງານລາວ')">🖨️ ພິມ</button>
         <button class="btn btn-success btn-sm" onclick="openLaoWorkerModal()">➕ ລົງທະບຽນໃໝ່</button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
           📂 Excel Upload<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleLaoWorkerExcel(this.files[0])">
@@ -8856,6 +8943,7 @@ function pageResignationsCompany() {
     <div class="card-header" style="background:linear-gradient(135deg,#4a1a1a,#c0392b);border-radius:12px 12px 0 0;border-bottom:none;">
       <span class="card-title" style="color:#fff;">🚪 ບັນທຶກການລາອອກ<br><span style="font-size:11px;color:#f5b7b1;font-weight:400;">Resignation / Departure Records</span></span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="printSection('rsCoHistory','ບັນທຶກການລາອອກ')">🖨️ ພິມ</button>
         <button class="btn btn-secondary btn-sm" onclick="downloadResignBulkTemplate()">⬇️ Template</button>
         <label class="btn btn-info btn-sm" style="cursor:pointer;margin:0;">
           📂 Excel Upload<input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleResignBulkExcel(this.files[0])">
@@ -8868,6 +8956,11 @@ function pageResignationsCompany() {
       <div class="alert" style="background:#eaf4ff;border-left:4px solid #2980b9;border-radius:8px;padding:12px 16px;font-size:13px;">
         📋 ລາຍລະອຽດການລາອອກທັງໝົດສາມາດເບິ່ງໄດ້ທີ່ <b>ຝັ່ງ Admin</b> — ຂໍ້ມູນຈະຖືກລຶບອອກຈາກລາຍຊື່ພະນັກງານຂອງທ່ານທັນທີ<br>
         💡 ຖ້າມີພະນັກງານລາອອກຫຼາຍຄົນພ້ອມກັນ ສາມາດໃຊ້ "⬇️ Template" ແລ້ວ "📂 Excel Upload" ເພື່ອນຳເຂົ້າທັງໝົດພ້ອມກັນໄດ້
+      </div>
+      <div style="margin-top:14px;">
+        <input type="text" id="rsSearchQ" placeholder="🔍 ຄົ້ນຫາ ຊື່ ຫຼື ER ID..." autocomplete="off"
+          style="width:100%;max-width:360px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-family:inherit;"
+          oninput="filterResignationsCompany()">
       </div>
       <div id="rsCoHistory" style="margin-top:12px;"></div>
     </div>
@@ -9196,17 +9289,33 @@ function showMvDetail(el, encoded) {
     ${timeline}`;
 }
 
+let _rsCoHistoryCache = [];
+
 async function loadResignationsCompany() {
   // Load count stats only for company side
   let q = sb.from('resignations').select('worker_type, er_id, firstname, lastname, resign_date, resign_category')
     .eq('company_id', currentUser.companyId).order('resign_date', { ascending: false });
   const { data } = await q;
   const rows = data || [];
+  _rsCoHistoryCache = rows;
   const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   setEl('rsLaoCount', rows.filter(r=>r.worker_type==='lao').length);
   setEl('rsFnCount',  rows.filter(r=>r.worker_type==='fn').length);
   setEl('rsFnrCount', rows.filter(r=>r.worker_type==='fnr').length);
+  renderResignationsCompanyTable(rows);
+}
 
+function filterResignationsCompany() {
+  const q = (document.getElementById('rsSearchQ')?.value || '').trim().toLowerCase();
+  if (!q) { renderResignationsCompanyTable(_rsCoHistoryCache); return; }
+  const filtered = _rsCoHistoryCache.filter(r =>
+    `${r.firstname||''} ${r.lastname||''}`.toLowerCase().includes(q) ||
+    String(r.er_id||'').toLowerCase().includes(q)
+  );
+  renderResignationsCompanyTable(filtered);
+}
+
+function renderResignationsCompanyTable(rows) {
   // Show brief history (no detail — admin only)
   const histEl = document.getElementById('rsCoHistory');
   if (histEl && rows.length > 0) {
@@ -9219,6 +9328,8 @@ async function loadResignationsCompany() {
         <td style="font-size:11px;">${(RESIGN_CATEGORIES.find(c=>c.value===r.resign_category)||{}).label||'-'}</td>
       </tr>`).join('')}
       </tbody></table>`;
+  } else if (histEl) {
+    histEl.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;">ບໍ່ພົບຂໍ້ມູນ</div>';
   }
 }
 async function loadResignationsAdmin() {
