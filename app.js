@@ -495,6 +495,7 @@ function buildSidebar() {
       ${isAdmin ? `<li><a href="#" onclick="loadPage('companyArchive')"><span class="icon">🗄️</span>ຄັງຂໍ້ມູນບໍລິສັດ</a></li>` : ''}
       ${isAdmin ? `<li><a href="https://email.godaddy.com" target="_blank" rel="noopener"><span class="icon">📧</span>ອີເມວ (SEZA) ↗️</a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('passwordResetRequests')"><span class="icon">🔑</span>ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່<span id="pwResetBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
+      ${isAdmin ? `<li><a href="#" onclick="loadPage('expiryNotifLog')"><span class="icon">📋</span>ສະຫຼຸບແຈ້ງເຕືອນເອກະສານໝົດອາຍຸ</a></li>` : ''}
       <li><div class="sidebar-section">ສະຖິຕິ</div></li>
       <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>ແຮງງານທັງໝົດ</a></li>
       <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>ແຮງງານຕ່າງປະເທດ</a></li>
@@ -697,15 +698,18 @@ async function checkNotifications() {
   const today = new Date();
 
   if (currentUser.role === 'admin' || currentUser.role === 'director') {
+    const seenAdmin = new Set(JSON.parse(sessionStorage.getItem('seenDocExpiry') || '[]'));
     activeCompanies.forEach(c => {
       if (c.rule_date) {
         const exp = new Date(c.rule_date);
         exp.setFullYear(exp.getFullYear() + 2);
-        if (exp <= today) notifications.push({ 
-          type: 'danger', 
+        const key = `admin_rule_${c.id}`;
+        if (exp <= today && !seenAdmin.has(key)) notifications.push({ 
+          type: 'danger', key,
           msg: `🏭 [${esc(c.username)}] ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ ໝົດອາຍຸແລ້ວ`,
           companyId: c.id,
-          page: 'companies'
+          page: 'companies',
+          detail: { docLabel: 'ໃບອະນຸຍາດນຳໃຊ້ກົດລະບຽບ', personName: esc(c.name_lao||''), companyUsername: esc(c.username||''), expiryDate: c.rule_date }
         });
       }
       // Health doc expires in 1yr, warn 1 month before
@@ -714,17 +718,20 @@ async function checkNotifications() {
         exp.setFullYear(exp.getFullYear() + 1);
         const warn = new Date(exp);
         warn.setMonth(warn.getMonth() - 1);
-        if (exp <= today) notifications.push({ 
-          type: 'danger', 
+        const key = `admin_health_${c.id}`;
+        if (exp <= today && !seenAdmin.has(key)) notifications.push({ 
+          type: 'danger', key,
           msg: `🏥 [${esc(c.username)}] ໃບຢັ້ງຢືນກວດສຸຂະພາບ ໝົດອາຍຸແລ້ວ`,
           companyId: c.id,
-          page: 'companies'
+          page: 'companies',
+          detail: { docLabel: 'ໃບຢັ້ງຢືນກວດສຸຂະພາບ', personName: esc(c.name_lao||''), companyUsername: esc(c.username||''), expiryDate: c.health_date }
         });
-        else if (warn <= today) notifications.push({ 
-          type: 'warning', 
+        else if (warn <= today && !seenAdmin.has(key)) notifications.push({ 
+          type: 'warning', key,
           msg: `⚠️ [${esc(c.username)}] ໃບຢັ້ງຢືນກວດສຸຂະພາບ ຈະໝົດອາຍຸໃນ 1 ເດືອນ`,
           companyId: c.id,
-          page: 'companies'
+          page: 'companies',
+          detail: { docLabel: 'ໃບຢັ້ງຢືນກວດສຸຂະພາບ', personName: esc(c.name_lao||''), companyUsername: esc(c.username||''), expiryDate: c.health_date }
         });
       }
     });
@@ -748,6 +755,7 @@ async function checkNotifications() {
 
   // ---- Admin/Director-side: ແຈ້ງເຕືອນເອກະສານພະນັກງານຕ່າງປະເທດໃກ້ໝົດອາຍຸ ທົ່ວທັງລະບົບ (ທຸກບໍລິສັດ active) — ໃຊ້ເກນເວລາດຽວກັນກັບຝັ່ງບໍລິສັດ ເພື່ອຄວາມສອດຄ່ອງກັນ
   if (currentUser.role === 'admin' || currentUser.role === 'director') {
+    const seenAdmin = new Set(JSON.parse(sessionStorage.getItem('seenDocExpiry') || '[]'));
     const activeIds = new Set(activeCompanies.map(c => c.id));
     const { data: workers } = await sb.from('foreign_workers').select('id,firstname,lastname,company_id,passport_expiry,labour_card_expiry,residence_card_expiry,visa_expiry, companies(id,username)');
     if (workers) {
@@ -760,26 +768,30 @@ async function checkNotifications() {
         if (w.passport_expiry) {
           const exp = new Date(w.passport_expiry);
           const warn180 = new Date(today); warn180.setDate(warn180.getDate() + 180);
-          if (exp <= today) {
-            notifications.push({ type: 'danger', msg: `🛂 ໜັງສືເດີນທາງ ${name} (${uname}) ໝົດອາຍຸແລ້ວ`, companyId: w.company_id, page: 'fnNew' });
-          } else if (exp <= warn180) {
-            notifications.push({ type: 'warning', msg: `🛂 ໜັງສືເດີນທາງ ${name} (${uname}) ຈະໝົດອາຍຸໃນ 6 ເດືອນ`, companyId: w.company_id, page: 'fnNew' });
+          const key = `admin_pp_${w.id}`;
+          const detail = { docLabel: 'ໜັງສືເດີນທາງ (Passport)', personName: name, companyUsername: uname, expiryDate: w.passport_expiry };
+          if (exp <= today && !seenAdmin.has(key)) {
+            notifications.push({ type: 'danger', key, msg: `🛂 ໜັງສືເດີນທາງ ${name} (${uname}) ໝົດອາຍຸແລ້ວ`, companyId: w.company_id, page: 'fnNew', detail });
+          } else if (exp <= warn180 && !seenAdmin.has(key)) {
+            notifications.push({ type: 'warning', key, msg: `🛂 ໜັງສືເດີນທາງ ${name} (${uname}) ຈະໝົດອາຍຸໃນ 6 ເດືອນ`, companyId: w.company_id, page: 'fnNew', detail });
           }
         }
 
         // ບັດແຮງງານ, ບັດພັກເຊົາ, ວີຊ່າ: ແຈ້ງລ່ວງໜ້າ 21 ວັນ
         [
-          ['labour_card_expiry', '🪪 ບັດແຮງງານ'],
-          ['residence_card_expiry', '🏠 ບັດພັກເຊົາ'],
-          ['visa_expiry', '🛂 ວີຊ່າ'],
-        ].forEach(([field, label]) => {
+          ['labour_card_expiry', '🪪 ບັດແຮງງານ', 'lc'],
+          ['residence_card_expiry', '🏠 ບັດພັກເຊົາ', 'rc'],
+          ['visa_expiry', '🛂 ວີຊ່າ', 'vi'],
+        ].forEach(([field, label, pfx]) => {
           if (!w[field]) return;
           const exp = new Date(w[field]);
           const warn21 = new Date(today); warn21.setDate(warn21.getDate() + 21);
-          if (exp <= today) {
-            notifications.push({ type: 'danger', msg: `${label} ${name} (${uname}) ໝົດອາຍຸແລ້ວ`, companyId: w.company_id, page: 'fnNew' });
-          } else if (exp <= warn21) {
-            notifications.push({ type: 'warning', msg: `${label} ${name} (${uname}) ຈະໝົດອາຍຸໃນ 21 ວັນ`, companyId: w.company_id, page: 'fnNew' });
+          const key = `admin_${pfx}_${w.id}`;
+          const detail = { docLabel: label.replace(/^\S+\s/, ''), personName: name, companyUsername: uname, expiryDate: w[field] };
+          if (exp <= today && !seenAdmin.has(key)) {
+            notifications.push({ type: 'danger', key, msg: `${label} ${name} (${uname}) ໝົດອາຍຸແລ້ວ`, companyId: w.company_id, page: 'fnNew', detail });
+          } else if (exp <= warn21 && !seenAdmin.has(key)) {
+            notifications.push({ type: 'warning', key, msg: `${label} ${name} (${uname}) ຈະໝົດອາຍຸໃນ 21 ວັນ`, companyId: w.company_id, page: 'fnNew', detail });
           }
         });
       });
@@ -938,17 +950,71 @@ function showNotifications() {
   if (notifications.length === 0) {
     list.innerHTML = '<p style="text-align:center;color:#27ae60;">✅ ບໍ່ມີການແຈ້ງເຕືອນ</p>';
   } else {
-    list.innerHTML = notifications.map(n => `
+    list.innerHTML = notifications.map((n, idx) => `
       <div class="alert alert-${n.type}" style="margin-bottom:8px;position:relative;">
         <div style="font-size:13px;cursor:pointer;padding-right:${n.key ? '60px' : '0'}"
-             onclick="closeModal('notifModal');goToCompanyFromNotif('${n.companyId||''}','${n.page||'companies'}')">${n.msg}</div>
-        ${n.companyId ? `<div style="font-size:11px;margin-top:3px;color:#2980b9;cursor:pointer;"
+             onclick="${n.detail ? `viewSingleNotif(${idx})` : `closeModal('notifModal');goToCompanyFromNotif('${n.companyId||''}','${n.page||'companies'}')`}">${n.msg}</div>
+        ${n.companyId && !n.detail ? `<div style="font-size:11px;margin-top:3px;color:#2980b9;cursor:pointer;"
              onclick="closeModal('notifModal');goToCompanyFromNotif('${n.companyId||''}','${n.page||'companies'}')">🔍 ກົດເພື່ອໄປ →</div>` : ''}
         ${n.key ? `<button onclick="dismissDocExpiry('${n.key}')" 
              style="position:absolute;top:6px;right:8px;background:rgba(0,0,0,.12);border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px;">ຮັບຊາບ</button>` : ''}
       </div>`).join('');
   }
   document.getElementById('notifModal').classList.add('show');
+}
+
+// ສະແດງລາຍລະອຽດການແຈ້ງເຕືອນອັນດຽວທີ່ກົດເຂົ້າໄປ (ບໍ່ສະແດງລາຍການອື່ນ ບໍ່ໃຫ້ສັບສົນ) — ຫຼັງເບິ່ງແລ້ວ ຈະລົບອອກຈາກລາຍການແຈ້ງເຕືອນ ແລະ ບັນທຶກເຂົ້າສະຫຼຸບແຍກຕ່າງຫາກ
+async function viewSingleNotif(idx) {
+  const n = notifications[idx];
+  if (!n) return;
+  closeModal('notifModal');
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:14px;width:min(420px,94vw);padding:26px;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.onclick = (e) => e.stopPropagation();
+  const d = n.detail || {};
+  panel.innerHTML = `
+    <div style="font-size:16px;font-weight:700;color:#154360;margin-bottom:14px;">${n.type === 'danger' ? '🔴' : '⚠️'} ລາຍລະອຽດການແຈ້ງເຕືອນ</div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <tr><td style="padding:6px 0;color:#888;width:40%;">ເອກະສານ</td><td style="padding:6px 0;font-weight:600;">${esc(d.docLabel||'-')}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;">ຊື່</td><td style="padding:6px 0;font-weight:600;">${esc(d.personName||'-')}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;">ບໍລິສັດ</td><td style="padding:6px 0;">${esc(d.companyUsername||'-')}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;">ວັນໝົດອາຍຸ</td><td style="padding:6px 0;">${d.expiryDate ? laoDate(d.expiryDate) : '-'}</td></tr>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-secondary" id="vsnGoBtn" style="flex:1;">🔍 ໄປໜ້າທີ່ກ່ຽວຂ້ອງ</button>
+      <button class="btn btn-primary" id="vsnAckBtn" style="flex:1;">✅ ຮັບຊາບ</button>
+    </div>
+  `;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  overlay.onclick = () => overlay.remove();
+
+  document.getElementById('vsnGoBtn').onclick = () => { overlay.remove(); goToCompanyFromNotif(n.companyId||'', n.page||'companies'); };
+  document.getElementById('vsnAckBtn').onclick = async () => {
+    if (n.key) dismissDocExpiryQuiet(n.key); // ລົບອອກຈາກລາຍການແຈ້ງເຕືອນ (ບໍ່ຮຽກ checkNotifications ຊ້ຳ, ຈະຮຽກລວມທ້າຍ)
+    try {
+      await sb.from('expiry_notification_log').insert({
+        company_id: n.companyId || null,
+        doc_label: d.docLabel || null,
+        person_name: d.personName || null,
+        company_username: d.companyUsername || null,
+        expiry_date: d.expiryDate || null,
+        notif_type: n.type || null,
+      });
+    } catch(e) { console.warn('log expiry notif failed:', e); }
+    overlay.remove();
+    checkNotifications();
+  };
+}
+
+// ຄືກັນກັບ dismissDocExpiry() ແຕ່ບໍ່ຮຽກ checkNotifications() ຊ້ຳ (ຜູ້ຮຽກຈະຮຽກເອງພາຍຫຼັງ)
+function dismissDocExpiryQuiet(key) {
+  const seen = new Set(JSON.parse(sessionStorage.getItem('seenDocExpiry') || '[]'));
+  seen.add(key);
+  sessionStorage.setItem('seenDocExpiry', JSON.stringify([...seen]));
 }
 
 // ============================================================
@@ -965,6 +1031,7 @@ function loadPage(page, pushState=true) {
     case 'companies': content.innerHTML = pageCompanies(); loadCompanyTable(); break;
     case 'companyArchive': content.innerHTML = pageCompanyArchive(); loadCompanyArchive(); break;
     case 'passwordResetRequests': content.innerHTML = pagePasswordResetRequests(); loadPasswordResetRequests(); sessionStorage.setItem('seenPwResetAt', Date.now()); setTimeout(checkNotifications, 500); break;
+    case 'expiryNotifLog': content.innerHTML = pageExpiryNotifLog(); loadExpiryNotifLog(); break;
     case 'manageUsers': content.innerHTML = pageManageUsers(); loadManageUsers(); break;
     case 'summary51': content.innerHTML = pageSummary51(); loadSummary51(); break;
     case 'summary52': content.innerHTML = pageSummary52(); loadSummary52(); break;
@@ -1634,6 +1701,42 @@ function pageCompanies() {
 
 
 // ---- ADMIN ONLY: ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່ (ຢຸດເຊີບໍລິສັດ/ຢຸດເຊີອື່ນໆລືມລະຫັດຜ່ານ) ----
+// ---- ADMIN ONLY: ສະຫຼຸບແຈ້ງເຕືອນເອກະສານໝົດອາຍຸ (ປະຫວັດການແຈ້ງເຕືອນທີ່ຮັບຊາບ/ເບິ່ງແລ້ວ) ----
+function pageExpiryNotifLog() {
+  return `
+  <div class="card">
+    <div class="card-header" style="background:linear-gradient(135deg,#0f2942,#1a5276);border-radius:12px 12px 0 0;border-bottom:none;">
+      <span class="card-title" style="color:#fff;">📋 ສະຫຼຸບແຈ້ງເຕືອນເອກະສານໝົດອາຍຸ<br><span style="font-size:11px;color:#cfe0ec;font-weight:400;">Expiry Notification Log</span></span>
+    </div>
+    <div class="card-body">
+      <div class="table-wrap" id="expiryLogTable"><div style="text-align:center;color:#aaa;padding:30px;">ກຳລັງໂຫຼດ...</div></div>
+    </div>
+  </div>`;
+}
+
+async function loadExpiryNotifLog() {
+  const el = document.getElementById('expiryLogTable');
+  if (!el) return;
+  const { data, error } = await sb.from('expiry_notification_log').select('*').order('acknowledged_at', { ascending: false });
+  if (error) {
+    el.innerHTML = `<div class="alert alert-danger">❌ ${error.message}<br><span style="font-size:11px;">ກວດສອບວ່າໄດ້ສ້າງຕາຕະລາງ expiry_notification_log ໃນ Supabase ແລ້ວບໍ່</span></div>`;
+    return;
+  }
+  const rows = data || [];
+  el.innerHTML = `<table><thead><tr>
+      <th style="padding:8px;">ວັນທີຮັບຊາບ</th><th style="padding:8px;">ເອກະສານ</th><th style="padding:8px;">ຊື່</th>
+      <th style="padding:8px;">ບໍລິສັດ</th><th style="padding:8px;">ວັນໝົດອາຍຸ</th>
+    </tr></thead><tbody>${rows.map(r => `
+      <tr>
+        <td style="padding:8px;">${laoDate(r.acknowledged_at)}</td>
+        <td style="padding:8px;">${esc(r.doc_label||'-')}</td>
+        <td style="padding:8px;">${esc(r.person_name||'-')}</td>
+        <td style="padding:8px;">${esc(r.company_username||'-')}</td>
+        <td style="padding:8px;">${r.expiry_date ? laoDate(r.expiry_date) : '-'}</td>
+      </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px;">ຍັງບໍ່ມີປະຫວັດ</td></tr>`}
+    </tbody></table>`;
+}
+
 function pagePasswordResetRequests() {
   return `
   <div class="card">
