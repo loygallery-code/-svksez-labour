@@ -503,7 +503,6 @@ function buildSidebar() {
       ${isAdmin ? `<li><a href="#" onclick="loadPage('empMovement')"><span class="icon">👥</span>ຂໍ້ມູນສະຖິຕິເລີ່ມຕົ້ນ</a></li>` : ''}
       <li><div class="sidebar-section">ລົງທະບຽນແຮງງານ ຕປທ</div></li>
       <li><a href="#" onclick="loadPage('fnNew')"><span class="icon">🆔</span>ລົງທະບຽນເຂົ້າໃໝ່ (FN)</a></li>
-      <li><a href="#" onclick="loadPage('fnRenew')"><span class="icon">🔄</span>ຕໍ່ອາຍຸເອກະສານ (FNR)</a></li>
       <li><a href="#" onclick="loadPage('fwRequestsAdmin')"><span class="icon">📥</span>ຄຳຂໍຈາກບໍລິສັດ</a></li>
       <li><div class="sidebar-section">ລົງທະບຽນແຮງງານລາວ</div></li>
       <li><a href="#" onclick="loadPage('laoWorkersAdmin')"><span class="icon">🇱🇦</span>ລາຍງານແຮງງານລາວ</a></li>
@@ -1049,7 +1048,6 @@ function loadPage(page, pushState=true) {
       break;
     case 'empMovement': content.innerHTML = pageBaselineAdmin(); loadBaselineAdmin(); break;
     case 'fnNew': content.innerHTML = pageFnNew(); loadFnNew(); break;
-    case 'fnRenew': content.innerHTML = pageFnRenew(); loadFnRenewSearch(); break;
     case 'fwNewWorkers':   content.innerHTML = pageFwNewWorkers();  loadFwNewWorkers();  break;
     case 'fwRenewDocs':    content.innerHTML = pageFwRenewDocs();   loadFwRenewDocs();   break;
     case 'fwRequestCompany': loadPage('fwNewWorkers', pushState); return; // redirect legacy
@@ -5140,35 +5138,6 @@ function fnrModalHtml() {
   </div>`;
 }
 
-function pageFnRenew() {
-  return `
-  <div class="card">
-    <div class="card-header" style="background:linear-gradient(135deg,#0f2942,#1a5276);border-radius:12px 12px 0 0;border-bottom:none;">
-      <span class="card-title" style="color:#fff;">🔄 ລົງທະບຽນຕໍ່ອາຍຸເອກະສານແຮງງານ ຕປທ<br><span style="font-size:11px;color:#cfe0ec;font-weight:400;">Foreign Worker Document Renewal (FNR)</span></span>
-    </div>
-    <div class="card-body">
-      <div class="form-group" style="max-width:520px;position:relative;">
-        <label>ຄົ້ນຫາແຮງງານທີ່ຈະຕໍ່ອາຍຸ (ຊື່ / ID ທະບຽນ / ເລກໜັງສືເດີນທາງ)</label>
-        <input type="text" id="fnrSearchInput" placeholder="ພິມຄົ້ນຫາ..." oninput="doFnrSearch()" autocomplete="off">
-        <div id="fnrSearchList" class="autocomplete-list" style="display:none;position:absolute;z-index:50;background:#fff;width:100%;border:1px solid #ddd;border-radius:8px;max-height:240px;overflow-y:auto;"></div>
-      </div>
-      <div class="section-title mt-4">ປະຫວັດການຕໍ່ອາຍຸທີ່ຜ່ານມາ</div>
-      <div class="table-wrap" id="fnrHistoryTable"><div style="text-align:center;color:#aaa;padding:20px;">ກຳລັງໂຫຼດ...</div></div>
-    </div>
-  </div>
-  ${fnSummaryCardHtml('fnrSum', null)}
-  ${fnrModalHtml()}`;
-}
-
-async function loadFnRenewSearch() {
-  let q = sb.from('foreign_workers').select('*').order('firstname');
-  if (currentUser.role === 'company') q = q.eq('company_id', currentUser.companyId);
-  const { data: rawData, error } = await q;
-  if (error) { document.getElementById('fnrHistoryTable').innerHTML = `<div class="alert alert-danger">❌ ${error.message}</div>`; return; }
-  _fnAllWorkersCache = await attachCompanyInfo(rawData || []);
-  loadFnrHistory();
-  loadFnSummary('fnrSum');  // auto-load summary for current month
-}
 
 function doFnrSearch() {
   const q = document.getElementById('fnrSearchInput').value.trim().toLowerCase();
@@ -5413,7 +5382,7 @@ async function saveFnRenewal() {
   document.getElementById('fnrSearchInput').value = '';
   const latestEl2 = document.getElementById('latestRecord');
   if (latestEl2) loadMyRecord();
-  loadFnRenewSearch();
+  loadFwRenewDocsData();
   } catch(e) { alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message); }
   finally { const b2 = document.querySelector('#fnrModalBody .btn-primary'); if (b2) { b2.disabled = false; b2.textContent = '💾 ບັນທຶກຂໍ້ມູນ'; } }
 }
@@ -6669,7 +6638,7 @@ function switchFwTab(tab) {
   document.getElementById('tabFnrPanel').style.display = tab === 'fnr' ? 'block' : 'none';
   document.getElementById('tabFnBtn').className = tab === 'fn' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
   document.getElementById('tabFnrBtn').className = tab === 'fnr' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
-  if (tab === 'fnr') loadFnRenewSearch();
+  if (tab === 'fnr') loadFwRenewDocsData();
 }
 
 async function loadFwCompany() {
