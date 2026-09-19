@@ -6232,22 +6232,25 @@ async function openFwLetterPanel(typeHint) {
   let loadError = null;
 
   if (type === 'renew') {
-    // Load FNR workers: those in foreign_workers whose reg_id starts FNR-
-    // (safer than querying foreign_worker_renewals which may have missing columns)
-    const { data: fwData, error } = await sb.from('foreign_workers')
+    // ດຶງຈາກ foreign_worker_renewals ໂດຍກົງ (ຕາຕະລາງປະຫວັດການຕໍ່ອາຍຸແທ້) — reg_id ຫຼັກໃນ foreign_workers ບໍ່ປ່ຽນເປັນ FNR ອີກຕໍ່ໄປ (ຄົງທີ່ຕະຫຼອດ) ຈຶ່ງດຶງຈາກທີ່ນີ້ແທນ
+    const { data: renewData, error } = await sb.from('foreign_worker_renewals')
       .select('id,reg_id,prefix,firstname,lastname,nationality,gender,position,passport_no,passport_expiry,stay_duration,photo_path,salary,dob')
       .eq('company_id', currentUser.companyId)
       .order('created_at', { ascending: false });
     loadError = error;
-    if (fwData) workers = fwData.filter(w => String(w.reg_id||'').startsWith('FNR'));
+    if (renewData) workers = renewData;
   } else {
-    // FN new: load from foreign_workers, exclude already-renewed (reg_id starts FNR-)
-    const { data: fwData, error } = await sb.from('foreign_workers')
-      .select('id,reg_id,prefix,firstname,lastname,nationality,gender,position,passport_no,passport_expiry,stay_duration,photo_path,salary,dob')
-      .eq('company_id', currentUser.companyId)
-      .order('created_at', { ascending: false });
+    // FN new: load from foreign_workers, exclude workers who already have a renewal on record (worker_id ໃນ foreign_worker_renewals) — ຫ້າມນັບຄົນດຽວກັນ 2 ຄັ້ງໃນ FN ໃໝ່ ແລະ FNR
+    const [{ data: fwData, error }, { data: renewedRows }] = await Promise.all([
+      sb.from('foreign_workers')
+        .select('id,reg_id,prefix,firstname,lastname,nationality,gender,position,passport_no,passport_expiry,stay_duration,photo_path,salary,dob')
+        .eq('company_id', currentUser.companyId)
+        .order('created_at', { ascending: false }),
+      sb.from('foreign_worker_renewals').select('worker_id').eq('company_id', currentUser.companyId)
+    ]);
     loadError = error;
-    if (fwData) workers = fwData.filter(w => !String(w.reg_id||'').startsWith('FNR'));
+    const renewedIds = new Set((renewedRows || []).map(r => r.worker_id));
+    if (fwData) workers = fwData.filter(w => !renewedIds.has(w.id));
   }
 
   if (loadError) {
