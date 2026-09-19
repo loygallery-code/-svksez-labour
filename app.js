@@ -62,6 +62,11 @@ function passwordStrengthMessage() {
   return 'ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 8 ໂຕ, ມີທັງຕົວອັກສອນ ແລະ ຕົວເລກປົນກັນ';
 }
 
+// ໃຊ້ສະເພາະຕອນຢຸດເຊີບໍລິສັດຕັ້ງລະຫັດຜ່ານໃໝ່ດ້ວຍຕົນເອງ (ຫຼັງຖືກຣີເຊັດ/ບັນຊີໃໝ່) — ເງື່ອນໄຂງ່າຍກວ່າ isPasswordStrong ຂ້າງເທິງ
+function isPasswordMinLength(pw) {
+  return typeof pw === 'string' && pw.length >= 6;
+}
+
 async function doLogin() {
   const u = document.getElementById('loginUser').value.trim();
   const p = document.getElementById('loginPass').value.trim();
@@ -113,6 +118,7 @@ async function doLogin() {
     } else {
       currentUser = { username: u, role: 'viewer', companyData: data };
     }
+    if (data.must_change_password) { openForcePasswordChangeModal(data); return; }
     initApp();
     return;
   }
@@ -129,10 +135,54 @@ async function doLogin() {
 
   // ໝາຍເຫດ: ລະບົບບໍ່ບັງຄັບປ່ຽນລະຫັດຜ່ານທຸກໄລຍະເວລາອີກຕໍ່ໄປ (ຄົງໄວ້ແຕ່ການກວດຄວາມແຂງແຮງລະຫັດຜ່ານຕອນຕັ້ງ/ປ່ຽນ)
 
+  if (data.must_change_password) { openForcePasswordChangeModal(data); return; }
   initApp();
 }
 
 document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ປັອບອັບບັງຄັບໃຫ້ຕັ້ງລະຫັດຜ່ານໃໝ່ດ້ວຍຕົນເອງ — ຂຶ້ນຫຼັງ login ຄັ້ງທຳອິດ ຖ້າບັນຊີຫາກໍ່ຖືກຣີເຊັດ/ເປັນບໍລິສັດໃໝ່ — ປິດ/ຂ້າມບໍ່ໄດ້ຈົນກວ່າຈະຕັ້ງລະຫັດຜ່ານໃໝ່ສຳເລັດ
+function openForcePasswordChangeModal(companyData) {
+  const overlay = document.createElement('div');
+  overlay.id = 'forcePwOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:14px;width:min(420px,94vw);padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+  panel.innerHTML = `
+    <div style="font-size:18px;font-weight:700;color:#154360;margin-bottom:4px;">🔒 ຕ້ອງຕັ້ງລະຫັດຜ່ານໃໝ່</div>
+    <div style="font-size:12px;color:#888;margin-bottom:18px;">ບັນຊີນີ້ຫາກໍ່ຖືກຕັ້ງ/ຣີເຊັດລະຫັດຜ່ານໂດຍແອັດມິນ — ກະລຸນາຕັ້ງລະຫັດຜ່ານໃໝ່ຂອງທ່ານເອງກ່ອນນຳໃຊ້ລະບົບ</div>
+    <div class="form-field" style="margin-bottom:12px;"><label>ລະຫັດຜ່ານໃໝ່ (ຢ່າງໜ້ອຍ 6 ໂຕ) <span style="color:red;">*</span></label><input type="password" id="fpwNew1" style="width:100%;"></div>
+    <div class="form-field" style="margin-bottom:6px;"><label>ພິມລະຫັດຜ່ານໃໝ່ອີກຄັ້ງ <span style="color:red;">*</span></label><input type="password" id="fpwNew2" style="width:100%;"></div>
+    <div id="fpwErr" style="color:#c0392b;font-size:12px;margin-top:6px;"></div>
+    <div style="text-align:right;margin-top:16px;">
+      <button class="btn btn-primary" id="fpwSaveBtn" style="width:100%;">✅ ຕັ້ງລະຫັດຜ່ານໃໝ່ ແລະ ເຂົ້າສູ່ລະບົບ</button>
+    </div>
+  `;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  // ຈົງໃຈບໍ່ໃສ່ onclick ປິດຢູ່ overlay/ປຸ່ມ ✕ — ບັງຄັບຕັ້ງລະຫັດຜ່ານໃໝ່ກ່ອນ ຈຶ່ງຈະປິດ/ຂ້າມໄດ້
+
+  document.getElementById('fpwSaveBtn').onclick = async () => {
+    const pw1 = document.getElementById('fpwNew1').value;
+    const pw2 = document.getElementById('fpwNew2').value;
+    const errEl = document.getElementById('fpwErr');
+    errEl.textContent = '';
+    if (!isPasswordMinLength(pw1)) { errEl.textContent = 'ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 6 ໂຕ (ຕົວອັກສອນ ຫຼື ຕົວເລກ)'; return; }
+    if (pw1 !== pw2) { errEl.textContent = 'ລະຫັດຜ່ານທັງ 2 ຊ່ອງບໍ່ກົງກັນ'; return; }
+    const btn = document.getElementById('fpwSaveBtn');
+    btn.disabled = true; btn.textContent = 'ກຳລັງບັນທຶກ...';
+    try {
+      const newHash = bc.hashSync(pw1, 10);
+      const { error } = await sb.from('companies').update({ password: newHash, password_changed_at: new Date().toISOString(), must_change_password: false }).eq('id', companyData.id);
+      if (error) throw error;
+      overlay.remove();
+      initApp();
+    } catch(e) {
+      errEl.textContent = 'ເກີດຂໍ້ຜິດພາດ: ' + e.message;
+      btn.disabled = false; btn.textContent = '✅ ຕັ້ງລະຫັດຜ່ານໃໝ່ ແລະ ເຂົ້າສູ່ລະບົບ';
+    }
+  };
+}
 
 // ---- ລືມລະຫັດຜ່ານ — ຢຸດເຊີບໍລິສັດ/ຢຸດເຊີອື່ນໆ ສົ່ງຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່ ໃຫ້ແອັດມິນອະນຸມັດ ----
 function openForgotPasswordModal() {
@@ -1618,7 +1668,7 @@ async function resolvePasswordReset(requestId, username) {
   if (!confirm(`ຢືນຢັນຕັ້ງລະຫັດຜ່ານໃໝ່ໃຫ້ "${username}"?\n\nລະຫັດຜ່ານໃໝ່ຈະສະແດງໃຫ້ທ່ານເຫັນຄັ້ງດຽວ ຫຼັງກົດຢືນຢັນ — ກະລຸນາຈົດໄວ້ເພື່ອແຈ້ງຄືນໃຫ້ຜູ້ຮ້ອງຂໍ`)) return;
 
   try {
-    const { error: upErr } = await sb.from('companies').update({ password: newHash, password_changed_at: new Date().toISOString() }).eq('id', co.id);
+    const { error: upErr } = await sb.from('companies').update({ password: newHash, password_changed_at: new Date().toISOString(), must_change_password: true }).eq('id', co.id);
     if (upErr) throw upErr;
     await sb.from('password_reset_requests').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', requestId);
     await logAudit('update', 'companies', co.id, { action_detail: 'ຣີເຊັດລະຫັດຜ່ານຕາມຄຳຮ້ອງຂໍ', username });
@@ -2093,6 +2143,7 @@ async function saveCompany() {
     // ບໍລິສັດໃໝ່ — ສ້າງລະຫັດຜ່ານແບບສຸ່ມ ແລະ username ຊົ່ວຄາວ, ຈາກນັ້ນອັບເດດເປັນ SSEZ@ເຂດ+reg_no ຫຼັງໄດ້ຮັບ reg_no ຈິງ (auto ຈາກ Supabase)
     generatedPassword = document.getElementById('cPassword').value || generateRandomPassword();
     payload.password = bc.hashSync(generatedPassword, 10);
+    payload.must_change_password = true;
     payload.password_changed_at = new Date().toISOString();
     payload.username = `TEMP-${Date.now()}-${Math.floor(Math.random()*10000)}`;
     const { data: inserted, error: insErr } = await sb.from('companies').insert(payload).select().single();
@@ -2126,7 +2177,7 @@ async function savePassword() {
   const id = document.getElementById('pwCompanyId').value;
   const pw = document.getElementById('pwNew').value.trim();
   if (!pw) { alert('ກະລຸນາໃສ່ລະຫັດຜ່ານໃໝ່'); return; }
-  const { error } = await sb.from('companies').update({ password: bc.hashSync(pw, 10), password_changed_at: new Date().toISOString() }).eq('id', id);
+  const { error } = await sb.from('companies').update({ password: bc.hashSync(pw, 10), password_changed_at: new Date().toISOString(), must_change_password: true }).eq('id', id);
   if (error) { alert('ເກີດຂໍ້ຜິດພາດ'); return; }
   await logAudit('update', 'companies', id, { action_detail: 'ແອັດມິນປ່ຽນລະຫັດຜ່ານໃຫ້ບໍລິສັດ' });
   closeModal('pwModal');
