@@ -6235,6 +6235,16 @@ async function openFwLetterPanel(typeHint) {
   let workers = [];
   let loadError = null;
 
+  // ດຶງລາຍຊື່ຄົນທີ່ຖືກສ້າງໃບສະເໜີ (ປະເພດດຽວກັນ) ໄປແລ້ວ ເພື່ອຕັດອອກ ບໍ່ໃຫ້ຂຶ້ນຄືນອີກ — ຍົກເວັ້ນຄຳຂໍທີ່ຖືກປະຕິເສດ (ໃຫ້ສົ່ງຄືນໃໝ່ໄດ້)
+  const { data: pastReqs } = await sb.from('fw_requests')
+    .select('workers')
+    .eq('company_id', currentUser.companyId)
+    .eq('request_type', type)
+    .or('rejected.is.null,rejected.eq.false');
+  const alreadyRequestedIds = new Set(
+    (pastReqs || []).flatMap(r => (r.workers || []).map(w => w.id))
+  );
+
   if (type === 'renew') {
     // ດຶງຈາກ foreign_worker_renewals ໂດຍກົງ (ຕາຕະລາງປະຫວັດການຕໍ່ອາຍຸແທ້) — reg_id ຫຼັກໃນ foreign_workers ບໍ່ປ່ຽນເປັນ FNR ອີກຕໍ່ໄປ (ຄົງທີ່ຕະຫຼອດ) ຈຶ່ງດຶງຈາກທີ່ນີ້ແທນ
     const { data: renewData, error } = await sb.from('foreign_worker_renewals')
@@ -6242,7 +6252,7 @@ async function openFwLetterPanel(typeHint) {
       .eq('company_id', currentUser.companyId)
       .order('created_at', { ascending: false });
     loadError = error;
-    if (renewData) workers = renewData;
+    if (renewData) workers = renewData.filter(w => !alreadyRequestedIds.has(w.id));
   } else {
     // FN new: load from foreign_workers, exclude workers who already have a renewal on record (worker_id ໃນ foreign_worker_renewals) — ຫ້າມນັບຄົນດຽວກັນ 2 ຄັ້ງໃນ FN ໃໝ່ ແລະ FNR
     const [{ data: fwData, error }, { data: renewedRows }] = await Promise.all([
@@ -6254,7 +6264,7 @@ async function openFwLetterPanel(typeHint) {
     ]);
     loadError = error;
     const renewedIds = new Set((renewedRows || []).map(r => r.worker_id));
-    if (fwData) workers = fwData.filter(w => !renewedIds.has(w.id));
+    if (fwData) workers = fwData.filter(w => !renewedIds.has(w.id) && !alreadyRequestedIds.has(w.id));
   }
 
   if (loadError) {
