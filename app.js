@@ -134,6 +134,53 @@ async function doLogin() {
 
 document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
+// ---- ລືມລະຫັດຜ່ານ — ຢຸດເຊີບໍລິສັດ/ຢຸດເຊີອື່ນໆ ສົ່ງຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່ ໃຫ້ແອັດມິນອະນຸມັດ ----
+function openForgotPasswordModal() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:14px;width:min(420px,94vw);padding:26px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.4);';
+  panel.onclick = (e) => e.stopPropagation();
+  panel.innerHTML = `
+    <div style="font-size:17px;font-weight:700;color:#154360;margin-bottom:4px;">ລືມລະຫັດຜ່ານ?</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;">ຕື່ມຂໍ້ມູນນີ້ ແອັດມິນຈະຮັບຄຳຮ້ອງ ແລະ ຕັ້ງລະຫັດຜ່ານໃໝ່ໃຫ້ (ຕິດຕໍ່ທ່ານກັບຄືນຕາມຊ່ອງທາງທີ່ໃຫ້ໄວ້)</div>
+    <div class="form-field" style="margin-bottom:12px;"><label>ຊື່ຜູ້ໃຊ້ (Username) <span style="color:red;">*</span></label><input type="text" id="fpUsername" style="width:100%;" placeholder="SSEZ@A36 ຫຼື admin"></div>
+    <div class="form-field" style="margin-bottom:6px;"><label>ເບີໂທ ຫຼື ຊ່ອງທາງຕິດຕໍ່ກັບຄືນ <span style="color:red;">*</span></label><input type="text" id="fpContact" style="width:100%;" placeholder="020xxxxxxxx"></div>
+    <div style="text-align:right;margin-top:18px;display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-secondary" id="fpCancelBtn">ຍົກເລີກ</button>
+      <button class="btn btn-primary" id="fpSubmitBtn">ສົ່ງຄຳຮ້ອງ</button>
+    </div>
+  `;
+  const closeFn = () => overlay.remove();
+  overlay.onclick = closeFn;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  document.getElementById('fpCancelBtn').onclick = closeFn;
+  document.getElementById('fpSubmitBtn').onclick = async () => {
+    const username = document.getElementById('fpUsername').value.trim();
+    const contact = document.getElementById('fpContact').value.trim();
+    if (!username || !contact) { alert('ກະລຸນາຕື່ມຊື່ຜູ້ໃຊ້ ແລະ ຊ່ອງທາງຕິດຕໍ່ໃຫ້ຄົບ'); return; }
+    const btn = document.getElementById('fpSubmitBtn');
+    btn.disabled = true; btn.textContent = 'ກຳລັງສົ່ງ...';
+    try {
+      const { error } = await sb.from('password_reset_requests').insert({ username, contact_info: contact });
+      if (error) throw error;
+      panel.innerHTML = `<div style="text-align:center;padding:20px 0;">
+        <div style="font-size:36px;margin-bottom:10px;">✅</div>
+        <div style="font-size:15px;font-weight:600;color:#154360;margin-bottom:6px;">ສົ່ງຄຳຮ້ອງສຳເລັດແລ້ວ</div>
+        <div style="font-size:13px;color:#666;">ແອັດມິນຈະຕິດຕໍ່ທ່ານກັບຄືນທາງ "${esc(contact)}" ພາຍໃນໄວໆນີ້</div>
+        <button class="btn btn-primary" style="margin-top:16px;" id="fpDoneBtn">ປິດ</button>
+      </div>`;
+      document.getElementById('fpDoneBtn').onclick = closeFn;
+    } catch(e) {
+      alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message + '\n\n(ອາດຍ້ອນຍັງບໍ່ໄດ້ສ້າງຕາຕະລາງ password_reset_requests ໃນ Supabase)');
+      btn.disabled = false; btn.textContent = 'ສົ່ງຄຳຮ້ອງ';
+    }
+  };
+}
+
+
 function toggleSidebar(){
   const sb = document.querySelector('.sidebar');
   const ov = document.getElementById('sidebarOverlay');
@@ -212,7 +259,7 @@ async function logAudit(action, tableName, recordId, details) {
     });
   } catch (e) { console.warn('logAudit failed:', e); }
   // ອັບເດດ badge ແຈ້ງເຕືອນ Audit Log ທັນທີຫຼັງບັນທຶກ (ສຳລັບ admin ຄົນອື່ນທີ່ອາດເປີດຄ້າງໄວ້)
-  if (currentUser?.role === 'admin') checkAuditBadge();
+  if (currentUser?.role === 'admin') { checkAuditBadge(); checkPwResetBadge(); }
 }
 
 // ============================================================
@@ -235,6 +282,22 @@ async function checkAuditBadge() {
       badge.style.display = 'none';
     }
   } catch (e) { console.warn('checkAuditBadge failed:', e); }
+}
+
+// ຈຳນວນຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່ທີ່ຍັງລໍຖ້າ — ສະແດງ badge ຄຽງເມນູ "ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່"
+async function checkPwResetBadge() {
+  const badge = document.getElementById('pwResetBadge');
+  if (!badge || !currentUser || currentUser.role !== 'admin') return;
+  try {
+    const { data } = await sb.from('password_reset_requests').select('id').eq('status', 'pending');
+    const total = data?.length || 0;
+    if (total > 0) {
+      badge.style.display = 'inline-flex';
+      badge.textContent = total > 99 ? '99+' : total;
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch (e) { console.warn('checkPwResetBadge failed:', e); }
 }
 
 function dismissAuditBadge() {
@@ -330,6 +393,7 @@ async function initApp() {
   await loadCompanies();
   await checkNotifications();
   checkAuditBadge();
+  checkPwResetBadge();
   if (currentUser.role === 'admin' && !window._auditBadgeInterval) {
     window._auditBadgeInterval = setInterval(checkAuditBadge, 60 * 1000);
   }
@@ -380,6 +444,7 @@ function buildSidebar() {
       ${isAdmin ? `<li><a href="#" onclick="loadPage('auditLog')"><span class="icon">🕵️</span>Audit Log<span id="auditNotifBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('companyArchive')"><span class="icon">🗄️</span>ຄັງຂໍ້ມູນບໍລິສັດ</a></li>` : ''}
       ${isAdmin ? `<li><a href="https://email.godaddy.com" target="_blank" rel="noopener"><span class="icon">📧</span>ອີເມວ (SEZA) ↗️</a></li>` : ''}
+      ${isAdmin ? `<li><a href="#" onclick="loadPage('passwordResetRequests')"><span class="icon">🔑</span>ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່<span id="pwResetBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
       <li><div class="sidebar-section">ສະຖິຕິ</div></li>
       <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>ແຮງງານທັງໝົດ</a></li>
       <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>ແຮງງານຕ່າງປະເທດ</a></li>
@@ -440,7 +505,36 @@ function forceExcelTextColumns(ws, colIndices, totalRows) {
 
 // ສ້າງແບບຟອມ Excel ຕົວຢ່າງ (ຫົວຂໍ້ທາສີ, 3 ຕົວຢ່າງ, ຟອນ Phetsarath OT, ຄຳເຕືອນສີແດງຫຼັງນາມສະກຸນ) — ໃຊ້ຮ່ວມກັນທັງ 3 ແບບຟອມ (FN/FNR/LA)
 const WARNING_TEXT = ' (ຂໍ້ມູນຕົວຢ່າງໃຫ້ລຶບອອກກ່ອນອັບໂຫລດຂໍ້ມູນລົງລະບົບ)';
-async function buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx, sheetName, filename }) {
+// ສ້າງ Excel ສຳລັບ "ດາວໂຫລດຂໍ້ມູນຈິງ" (export, ບໍ່ແມ່ນແບບຟອມຕົວຢ່າງ) — ຫົວຂໍ້ທາສີຟ້າ + ຟອນ Phetsarath OT ຄືກັນ, ແຕ່ບໍ່ມີຄຳເຕືອນສີແດງ (ຍ້ອນເປັນຂໍ້ມູນຈິງ ບໍ່ແມ່ນຕົວຢ່າງ)
+async function buildStyledDataXlsx({ headers, dataRows, sheetName, filename }) {
+  if (!window.ExcelJS) { alert('ກຳລັງໂຫຼດ ExcelJS, ລອງໃໝ່ອີກຄັ້ງ'); return; }
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName);
+  const FONT_NAME = 'Phetsarath OT';
+
+  ws.addRow(headers);
+  ws.getRow(1).eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A5276' } };
+    cell.font = { name: FONT_NAME, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.alignment = { vertical: 'middle', wrapText: true };
+  });
+
+  dataRows.forEach(rowVals => {
+    const row = ws.addRow(rowVals);
+    row.eachCell(cell => { cell.font = { name: FONT_NAME }; });
+  });
+
+  headers.forEach((h, i) => { ws.getColumn(i+1).width = 22; });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+async function buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx, sheetName, filename, noteRows }) {
   if (!window.ExcelJS) { alert('ກຳລັງໂຫຼດ ExcelJS, ລອງໃໝ່ອີກຄັ້ງ'); return; }
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet(sheetName);
@@ -457,13 +551,19 @@ async function buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx, s
     const row = ws.addRow(rowVals);
     row.eachCell((cell, colNumber) => {
       cell.font = { name: FONT_NAME };
-      if (colNumber - 1 === lastNameColIdx) { // ExcelJS colNumber ເລີ່ມນັບຈາກ 1
+      if (lastNameColIdx != null && colNumber - 1 === lastNameColIdx) { // ExcelJS colNumber ເລີ່ມນັບຈາກ 1
         cell.value = { richText: [
           { text: String(rowVals[lastNameColIdx] ?? ''), font: { name: FONT_NAME } },
           { text: WARNING_TEXT, font: { name: FONT_NAME, color: { argb: 'FFFF0000' } } },
         ]};
       }
     });
+  });
+
+  // ແຖວໝາຍເຫດເພີ່ມເຕີມ (ຖ້າມີ) — ບໍ່ໃສ່ຄຳເຕືອນສີແດງ, ຕົວໜັງສືສີເທົາ italic ໃຫ້ຮູ້ວ່າເປັນຄຳອະທິບາຍ ບໍ່ແມ່ນຂໍ້ມູນຄົນ
+  (noteRows || []).forEach(rowVals => {
+    const row = ws.addRow(rowVals);
+    row.eachCell(cell => { cell.font = { name: FONT_NAME, italic: true, color: { argb: 'FF888888' } }; });
   });
 
   headers.forEach((h, i) => { ws.getColumn(i+1).width = 24; });
@@ -803,6 +903,7 @@ function loadPage(page, pushState=true) {
     case 'dashboard': content.innerHTML = pageDashboard(); break;
     case 'companies': content.innerHTML = pageCompanies(); loadCompanyTable(); break;
     case 'companyArchive': content.innerHTML = pageCompanyArchive(); loadCompanyArchive(); break;
+    case 'passwordResetRequests': content.innerHTML = pagePasswordResetRequests(); loadPasswordResetRequests(); sessionStorage.setItem('seenPwResetAt', Date.now()); setTimeout(checkNotifications, 500); break;
     case 'manageUsers': content.innerHTML = pageManageUsers(); loadManageUsers(); break;
     case 'summary51': content.innerHTML = pageSummary51(); loadSummary51(); break;
     case 'summary52': content.innerHTML = pageSummary52(); loadSummary52(); break;
@@ -1470,6 +1571,63 @@ function pageCompanies() {
   </div>`;
 }
 
+
+// ---- ADMIN ONLY: ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່ (ຢຸດເຊີບໍລິສັດ/ຢຸດເຊີອື່ນໆລືມລະຫັດຜ່ານ) ----
+function pagePasswordResetRequests() {
+  return `
+  <div class="card">
+    <div class="card-header" style="background:linear-gradient(135deg,#0f2942,#1a5276);border-radius:12px 12px 0 0;border-bottom:none;">
+      <span class="card-title" style="color:#fff;">🔑 ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່<br><span style="font-size:11px;color:#cfe0ec;font-weight:400;">Password Reset Requests</span></span>
+    </div>
+    <div class="card-body">
+      <div class="table-wrap" id="pwResetTable"><div style="text-align:center;color:#aaa;padding:30px;">ກຳລັງໂຫຼດ...</div></div>
+    </div>
+  </div>`;
+}
+
+async function loadPasswordResetRequests() {
+  const el = document.getElementById('pwResetTable');
+  if (!el) return;
+  const { data, error } = await sb.from('password_reset_requests').select('*').order('requested_at', { ascending: false });
+  if (error) {
+    el.innerHTML = `<div class="alert alert-danger">❌ ${error.message}<br><span style="font-size:11px;">ກວດສອບວ່າໄດ້ສ້າງຕາຕະລາງ password_reset_requests ໃນ Supabase ແລ້ວບໍ່</span></div>`;
+    return;
+  }
+  const rows = data || [];
+  el.innerHTML = `<table><thead><tr>
+      <th style="padding:8px;">ວັນທີສົ່ງຄຳຮ້ອງ</th><th style="padding:8px;">ຊື່ຜູ້ໃຊ້</th><th style="padding:8px;">ຊ່ອງທາງຕິດຕໍ່</th>
+      <th style="padding:8px;">ສະຖານະ</th><th style="padding:8px;">ຈັດການ</th>
+    </tr></thead><tbody>${rows.map(r => `
+      <tr style="${r.status==='resolved' ? 'opacity:0.55;' : ''}">
+        <td style="padding:8px;">${laoDate(r.requested_at)}</td>
+        <td style="padding:8px;"><b>${esc(r.username)}</b></td>
+        <td style="padding:8px;">${esc(r.contact_info||'-')}</td>
+        <td style="padding:8px;">${r.status === 'resolved' ? '<span style="color:#2e9d67;">✅ ແກ້ໄຂແລ້ວ</span>' : '<span style="color:#e67e22;">⏳ ລໍຖ້າ</span>'}</td>
+        <td style="padding:8px;">${r.status === 'resolved' ? '-' : `<button class="btn btn-primary btn-sm" onclick="resolvePasswordReset('${r.id}','${escAttr(r.username)}')">🔄 ຣີເຊັດລະຫັດຜ່ານ</button>`}</td>
+      </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px;">ບໍ່ມີຄຳຮ້ອງ</td></tr>`}
+    </tbody></table>`;
+}
+
+// ຕັ້ງລະຫັດຜ່ານໃໝ່ໃຫ້ບັນຊີທີ່ຮ້ອງຂໍ — ສ້າງລະຫັດສຸ່ມ, hash ດ້ວຍ bcrypt, ອັບເດດ, ແລ້ວສະແດງໃຫ້ແອັດມິນເຫັນເທື່ອດຽວເພື່ອເອົາໄປແຈ້ງຄືນ
+async function resolvePasswordReset(requestId, username) {
+  const { data: co, error: findErr } = await sb.from('companies').select('id,username').eq('username', username).single();
+  if (findErr || !co) { alert(`ບໍ່ພົບຊື່ຜູ້ໃຊ້ "${username}" ໃນລະບົບ — ກວດຄືນວ່າຄົນຮ້ອງພິມຊື່ຖືກຕ້ອງບໍ່`); return; }
+
+  const newPw = generateRandomPassword();
+  const newHash = bc.hashSync(newPw, 10);
+  if (!confirm(`ຢືນຢັນຕັ້ງລະຫັດຜ່ານໃໝ່ໃຫ້ "${username}"?\n\nລະຫັດຜ່ານໃໝ່ຈະສະແດງໃຫ້ທ່ານເຫັນຄັ້ງດຽວ ຫຼັງກົດຢືນຢັນ — ກະລຸນາຈົດໄວ້ເພື່ອແຈ້ງຄືນໃຫ້ຜູ້ຮ້ອງຂໍ`)) return;
+
+  try {
+    const { error: upErr } = await sb.from('companies').update({ password: newHash, password_changed_at: new Date().toISOString() }).eq('id', co.id);
+    if (upErr) throw upErr;
+    await sb.from('password_reset_requests').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', requestId);
+    await logAudit('update', 'companies', co.id, { action_detail: 'ຣີເຊັດລະຫັດຜ່ານຕາມຄຳຮ້ອງຂໍ', username });
+    alert(`✅ ຕັ້ງລະຫັດຜ່ານໃໝ່ສຳເລັດ!\n\nUsername: ${username}\nລະຫັດຜ່ານໃໝ່: ${newPw}\n\n⚠️ ຈົດໄວ້ດຽວນີ້ — ຈະບໍ່ສະແດງອີກຄັ້ງ — ແລ້ວແຈ້ງໃຫ້ຜູ້ຮ້ອງຂໍທາງຊ່ອງທາງຕິດຕໍ່ທີ່ໃຫ້ໄວ້`);
+    loadPasswordResetRequests();
+  } catch(e) {
+    alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message);
+  }
+}
 
 // ---- ADMIN ONLY: ຄັງຂໍ້ມູນບໍລິສັດ — ເກັບຂໍ້ມູນບໍລິສັດທັງໝົດ (ເຄື່ອນໄຫວ/ຖືກລະງັບ/ຖືກລຶບ) ພ້ອມຄົ້ນຫາ ແລະ ພິມລາຍງານ ----
 function pageCompanyArchive() {
@@ -2483,10 +2641,12 @@ async function loadSummary51() {
 async function exportSummary51() {
   const table = document.querySelector('#summary51Table table');
   if (!table) return;
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(table);
-  XLSX.utils.book_append_sheet(wb, ws, 'Summary 5.1');
-  XLSX.writeFile(wb, 'SVKSEZ_Summary51.xlsx');
+  const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+    Array.from(tr.querySelectorAll('th,td')).map(td => td.textContent.trim())
+  );
+  const headers = rows[0] || [];
+  const dataRows = rows.slice(1);
+  buildStyledDataXlsx({ headers, dataRows, sheetName: 'Summary 5.1', filename: 'SVKSEZ_Summary51.xlsx' });
 }
 
 // ============================================================
@@ -2582,10 +2742,12 @@ async function loadSummary52() {
 async function exportSummary52() {
   const table = document.querySelector('#summary52Table table');
   if (!table) return;
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(table);
-  XLSX.utils.book_append_sheet(wb, ws, 'Summary 5.2');
-  XLSX.writeFile(wb, 'SVKSEZ_Summary52.xlsx');
+  const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+    Array.from(tr.querySelectorAll('th,td')).map(td => td.textContent.trim())
+  );
+  const headers = rows[0] || [];
+  const dataRows = rows.slice(1);
+  buildStyledDataXlsx({ headers, dataRows, sheetName: 'Summary 5.2', filename: 'SVKSEZ_Summary52.xlsx' });
 }
 
 // ============================================================
@@ -2733,10 +2895,12 @@ async function loadMonthly() {
 async function exportMonthly() {
   const table = document.querySelector('#monthlyTable table');
   if (!table) return;
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(table);
-  XLSX.utils.book_append_sheet(wb, ws, 'Monthly');
-  XLSX.writeFile(wb, 'SVKSEZ_Monthly.xlsx');
+  const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+    Array.from(tr.querySelectorAll('th,td')).map(td => td.textContent.trim())
+  );
+  const headers = rows[0] || [];
+  const dataRows = rows.slice(1);
+  buildStyledDataXlsx({ headers, dataRows, sheetName: 'Monthly', filename: 'SVKSEZ_Monthly.xlsx' });
 }
 
 // ============================================================
@@ -3408,10 +3572,12 @@ async function selectCompany(id) {
 function exportSearchResult() {
   const table = document.querySelector('#searchResult table');
   if (!table) { alert('ບໍ່ມີຕາຕະລາງ'); return; }
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(table);
-  XLSX.utils.book_append_sheet(wb, ws, 'Result');
-  XLSX.writeFile(wb, 'SVKSEZ_Search.xlsx');
+  const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+    Array.from(tr.querySelectorAll('th,td')).map(td => td.textContent.trim())
+  );
+  const headers = rows[0] || [];
+  const dataRows = rows.slice(1);
+  buildStyledDataXlsx({ headers, dataRows, sheetName: 'Result', filename: 'SVKSEZ_Search.xlsx' });
 }
 
 // ============================================================
@@ -3702,15 +3868,13 @@ async function loadBaseline() {
 }
 
 function downloadBaselineTemplate() {
-  const wb = XLSX.utils.book_new();
-  const headers = [['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ສັນຊາດ (ລາວ=ລາວ)','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່']];
-  headers.push(['ສົມສີ','ສີລາ','ຊາຍ','ລາວ','ປະລິຍາຕີ','ຫົວໜ້າຝ່າຍຜະລິດ']);
-  headers.push(['ສີດາ','ວົງສະຫວັນ','ຍິງ','ລາວ','ມສ7','ພະນັກງານຝ່າຍຜະລິດ']);
-  headers.push(['WANG','WEI','ຊາຍ','ຈີນ','ປະລິຍາຕີ','ວິສະວະກອນ']);
-  const ws = XLSX.utils.aoa_to_sheet(headers);
-  ws['!cols'] = headers[0].map(()=>({wch:22}));
-  XLSX.utils.book_append_sheet(wb, ws, 'ຂໍ້ມູນເລີ່ມຕົ້ນ');
-  XLSX.writeFile(wb, `SVKSEZ_ຂໍ້ມູນເລີ່ມຕົ້ນ.xlsx`);
+  const headers = ['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ສັນຊາດ (ລາວ=ລາວ)','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່'];
+  const exampleRows = [
+    ['ສົມສີ','ສີລາ','ຊາຍ','ລາວ','ປະລິຍາຕີ','ຫົວໜ້າຝ່າຍຜະລິດ'],
+    ['ສີດາ','ວົງສະຫວັນ','ຍິງ','ລາວ','ມສ7','ພະນັກງານຝ່າຍຜະລິດ'],
+    ['WANG','WEI','ຊາຍ','ຈີນ','ປະລິຍາຕີ','ວິສະວະກອນ'],
+  ];
+  buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx: 1, sheetName: 'ຂໍ້ມູນເລີ່ມຕົ້ນ', filename: 'SVKSEZ_ຂໍ້ມູນເລີ່ມຕົ້ນ.xlsx' });
 }
 
 async function uploadBaselineExcel(input) {
@@ -5747,7 +5911,6 @@ async function handleFnNewBulkPhotos(fileList) {
 }
 
 function downloadFnBulkTemplate() {
-  if (!window.XLSX) { alert('ກຳລັງໂຫຼດ XLSX...'); return; }
   const headers = [
     'ຄຳນຳໜ້າ (Mr/Ms)', 'ຊື່ (firstname)', 'ນາມສະກຸນ (lastname)',
     'ສັນຊາດ (nationality)', 'ເພດ (ຊາຍ/ຍິງ)', 'ຕຳແໜ່ງ (position)',
@@ -5759,20 +5922,12 @@ function downloadFnBulkTemplate() {
     'ເລກ Visa', 'ວັນທີອອກ Visa DD/MM/YYYY', 'ວັນໝົດ Visa DD/MM/YYYY',
     'ວັນທີເລີ່ມເຮັດວຽກແທ້ຈິງ DD/MM/YYYY (ຖ້າຮູ້ — ໃຊ້ຄິດໄລ່ອາຍຸການເຮັດວຽກ)'
   ];
-  const example = [
-    'Mr','ສົມ','ສຸທາ','ຫວຽດນາມ','ຊາຍ','ຊ່າງ','3500000','01/01/1990',
-    'P123456789','01/01/2022','01/01/2027',
-    'LC001','01/03/2023','01/03/2025','12',
-    'RC001','01/03/2023','01/03/2025',
-    'V001','01/03/2023','01/03/2025',
-    '15/06/2020'
+  const exampleRows = [
+    ['Mr','ສົມ','ສຸທາ','ຫວຽດນາມ','ຊາຍ','ຊ່າງ','3500000','01/01/1990','P123456789','01/01/2022','01/01/2027','LC001','01/03/2023','01/03/2025','12','RC001','01/03/2023','01/03/2025','V001','01/03/2023','01/03/2025','15/06/2020'],
+    ['Ms','ນາງ ວັນນາ','ພັນຍາ','ຫວຽດນາມ','ຍິງ','ພະນັກງານ','3200000','12/05/1992','P223456789','01/02/2022','01/02/2027','LC002','01/04/2023','01/04/2025','12','RC002','01/04/2023','01/04/2025','V002','01/04/2023','01/04/2025','01/07/2020'],
+    ['Mr','ບຸນ','ໄຊຍະສອນ','ຈີນ','ຊາຍ','ວິສະວະກອນ','4500000','23/09/1988','P323456789','01/03/2022','01/03/2027','LC003','01/05/2023','01/05/2025','12','RC003','01/05/2023','01/05/2025','V003','01/05/2023','01/05/2025','15/08/2020'],
   ];
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-  ws['!cols'] = headers.map(() => ({ wch: 22 }));
-  forceExcelTextColumns(ws, [7,9,10,12,13,16,17,19,20,21], 1);
-  XLSX.utils.book_append_sheet(wb, ws, 'FN_Bulk');
-  XLSX.writeFile(wb, 'FN_Bulk_Template.xlsx');
+  buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx: 2, sheetName: 'FN_Bulk', filename: 'FN_Bulk_Template.xlsx' });
 }
 
 async function handleFnBulkExcel(file) {
@@ -6763,26 +6918,24 @@ let _fnNewCache = []; // ໃຊ້ໂດຍ exportFnNewExcel()/downloadFnNewPhot
 // ດາວໂຫລດຂໍ້ມູນແຮງງານຕ່າງປະເທດ (FN) ເປັນ Excel — ສະເພາະ director/deputy_director/labour_chief/admin
 function exportFnNewExcel() {
   if (!_fnNewCache.length) { alert('ບໍ່ມີຂໍ້ມູນໃຫ້ດາວໂຫລດ'); return; }
-  const rows = _fnNewCache.map(w => ({
-    'ID ທະບຽນ': w.reg_id || '',
-    'ຊື່': `${w.prefix||''} ${w.firstname||''} ${w.lastname||''}`.trim(),
-    'ບໍລິສັດ': w.companies?.username || '',
-    'ຊື່ບໍລິສັດ': w.companies?.name_lao || '',
-    'ສັນຊາດ': w.nationality || '',
-    'ເພດ': w.gender || '',
-    'ວັນເດືອນປີເກີດ': w.dob || '',
-    'ຕຳແໜ່ງ': w.position || '',
-    'ເລກທີ່ໜັງສືຜ່ານແດນ': w.passport_no || '',
-    'ໝົດອາຍຸໜັງສືຜ່ານແດນ': w.passport_expiry || '',
-    'ເລກທີ່ບັດແຮງງານ': w.labour_card_no || '',
-    'ໝົດອາຍຸບັດແຮງງານ': w.labour_card_expiry || '',
-    'ກຳນົດຢູ່ (ເດືອນ)': w.stay_duration || '',
-    'ວັນທີເລີ່ມ': w.start_date || '',
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'FN Workers');
-  XLSX.writeFile(wb, `FN_ແຮງງານຕ່າງປະເທດ_${new Date().toISOString().slice(0,10)}.xlsx`);
+  const headers = ['ID ທະບຽນ','ຊື່','ບໍລິສັດ','ຊື່ບໍລິສັດ','ສັນຊາດ','ເພດ','ວັນເດືອນປີເກີດ','ຕຳແໜ່ງ','ເລກທີ່ໜັງສືຜ່ານແດນ','ໝົດອາຍຸໜັງສືຜ່ານແດນ','ເລກທີ່ບັດແຮງງານ','ໝົດອາຍຸບັດແຮງງານ','ກຳນົດຢູ່ (ເດືອນ)','ວັນທີເລີ່ມ'];
+  const dataRows = _fnNewCache.map(w => [
+    w.reg_id || '',
+    `${w.prefix||''} ${w.firstname||''} ${w.lastname||''}`.trim(),
+    w.companies?.username || '',
+    w.companies?.name_lao || '',
+    w.nationality || '',
+    w.gender || '',
+    w.dob || '',
+    w.position || '',
+    w.passport_no || '',
+    w.passport_expiry || '',
+    w.labour_card_no || '',
+    w.labour_card_expiry || '',
+    w.stay_duration || '',
+    w.start_date || '',
+  ]);
+  buildStyledDataXlsx({ headers, dataRows, sheetName: 'FN Workers', filename: `FN_ແຮງງານຕ່າງປະເທດ_${new Date().toISOString().slice(0,10)}.xlsx` });
 }
 
 // ດາວໂຫລດຮູບພະນັກງານທັງໝົດເປັນ ZIP — ສະເພາະ director/deputy_director/labour_chief/admin
@@ -8008,32 +8161,25 @@ function switchEmpTab(name, btn) {
 
 // Download Excel template
 function downloadTemplate(type) {
-  const wb = XLSX.utils.book_new();
-  let headers, sheetName, dateColIdx;
+  let headers, sheetName, exampleRows;
   if(type === '8.1') {
-    headers = [['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ສະຖານະ (ຝຶກງານ/ຖາວອນ)','ມື້ເຂົ້າເຮັດວຽກ DD/MM/YYYY']];
-    sheetName = '8.1-ລາວເຂົ້າໃໝ່'; dateColIdx = [6];
+    headers = ['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ສະຖານະ (ຝຶກງານ/ຖາວອນ)','ມື້ເຂົ້າເຮັດວຽກ DD/MM/YYYY'];
+    sheetName = '8.1-ລາວເຂົ້າໃໝ່';
+    exampleRows = [['ສົມສີ','ສີລາ','ຊາຍ','ປະລິຍາຕີ','ຊ່າງ','ຖາວອນ','15/01/2025']];
   } else if(type === '8.2') {
-    headers = [['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ເຫດຜົນການລາອອກ','ມື້ເຂົ້າເຮັດວຽກ DD/MM/YYYY','ມື້ລາອອກ DD/MM/YYYY']];
-    sheetName = '8.2-ລາວລາອອກ'; dateColIdx = [6,7];
+    headers = ['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ເຫດຜົນການລາອອກ','ມື້ເຂົ້າເຮັດວຽກ DD/MM/YYYY','ມື້ລາອອກ DD/MM/YYYY'];
+    sheetName = '8.2-ລາວລາອອກ';
+    exampleRows = [['ສົມສີ','ສີລາ','ຊາຍ','ປະລິຍາຕີ','ຊ່າງ','ຍ້າຍໄປຕ່າງແຂວງ','15/01/2023','01/06/2025']];
   } else if(type === '8.3') {
-    headers = [['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ສັນຊາດ','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ວັນທີເຂົ້າມາລາວ DD/MM/YYYY','ກຳນົດຢູ່ລາວ (1/3/6/12 ເດືອນ)']];
-    sheetName = '8.3-ຕປທເຂົ້າໃໝ່'; dateColIdx = [6];
+    headers = ['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ສັນຊາດ','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ວັນທີເຂົ້າມາລາວ DD/MM/YYYY','ກຳນົດຢູ່ລາວ (1/3/6/12 ເດືອນ)'];
+    sheetName = '8.3-ຕປທເຂົ້າໃໝ່';
+    exampleRows = [['WANG','WEI','ຊາຍ','ຈີນ','ປະລິຍາຕີ','ວິສະວະກອນ','01/02/2025','12']];
   } else {
-    headers = [['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ສັນຊາດ','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ເຫດຜົນການລາອອກ','ວັນທີເຂົ້າມາລາວ DD/MM/YYYY','ມື້ລາອອກ DD/MM/YYYY','ກຳນົດຢູ່ລາວ (1/3/6/12 ເດືອນ)']];
-    sheetName = '8.4-ຕປທລາອອກ'; dateColIdx = [7,8];
+    headers = ['ຊື່','ນາມສະກຸນ','ເພດ (ຊາຍ/ຍິງ)','ສັນຊາດ','ວຸດທິການສຶກສາ','ຕຳແໜ່ງ/ໜ້າທີ່','ເຫດຜົນການລາອອກ','ວັນທີເຂົ້າມາລາວ DD/MM/YYYY','ມື້ລາອອກ DD/MM/YYYY','ກຳນົດຢູ່ລາວ (1/3/6/12 ເດືອນ)'];
+    sheetName = '8.4-ຕປທລາອອກ';
+    exampleRows = [['WANG','WEI','ຊາຍ','ຈີນ','ປະລິຍາຕີ','ວິສະວະກອນ','ໝົດສັນຍາ','01/02/2023','01/06/2025','12']];
   }
-  // Add sample row
-  if(type === '8.1') headers.push(['ສົມສີ','ສີລາ','ຊາຍ','ປະລິຍາຕີ','ຊ່າງ','ຖາວອນ','15/01/2025']);
-  else if(type === '8.2') headers.push(['ສົມສີ','ສີລາ','ຊາຍ','ປະລິຍາຕີ','ຊ່າງ','ຍ້າຍໄປຕ່າງແຂວງ','15/01/2023','01/06/2025']);
-  else if(type === '8.3') headers.push(['WANG','WEI','ຊາຍ','ຈີນ','ປະລິຍາຕີ','ວິສະວະກອນ','01/02/2025','12']);
-  else headers.push(['WANG','WEI','ຊາຍ','ຈີນ','ປະລິຍາຕີ','ວິສະວະກອນ','ໝົດສັນຍາ','01/02/2023','01/06/2025','12']);
-
-  const ws = XLSX.utils.aoa_to_sheet(headers);
-  ws['!cols'] = headers[0].map(()=>({wch:22}));
-  forceExcelTextColumns(ws, dateColIdx, headers.length - 1);
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, `SVKSEZ_Form_${type}.xlsx`);
+  buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx: 1, sheetName, filename: `SVKSEZ_Form_${type}.xlsx` });
 }
 
 // Upload and preview Excel
@@ -8453,10 +8599,12 @@ function renderLaoWorkersAdmin(workers) {
 function exportLaoWorkersAdmin() {
   const table = document.getElementById('lwAdminTableEl');
   if (!table) { alert('ກະລຸນາໂຫຼດຂໍ້ມູນກ່ອນ'); return; }
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(table);
-  XLSX.utils.book_append_sheet(wb, ws, 'LaoWorkers C3');
-  XLSX.writeFile(wb, 'SVKSEZ_LaoWorkers_C3.xlsx');
+  const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+    Array.from(tr.querySelectorAll('th,td')).map(td => td.textContent.trim())
+  );
+  const headers = rows[0] || [];
+  const dataRows = rows.slice(1);
+  buildStyledDataXlsx({ headers, dataRows, sheetName: 'LaoWorkers C3', filename: 'SVKSEZ_LaoWorkers_C3.xlsx' });
 }
 
 // ============================================================
@@ -9087,22 +9235,18 @@ async function deleteResignation(id) {
 // EXCEL BULK UPLOAD — ບັນທຶກການລາອອກຫຼາຍຄົນພ້ອມກັນ
 // ============================================================
 function downloadResignBulkTemplate() {
-  if (!window.XLSX) { alert('ກຳລັງໂຫຼດ XLSX, ລອງໃໝ່ອີກສັກຄູ່'); return; }
   const headers = ['ປະເພດ (lao/fn/fnr)', 'ID ທະບຽນ', 'ຊື່ (ອ້າງອີງເທົ່ານັ້ນ)', 'ນາມສະກຸນ (ອ້າງອີງເທົ່ານັ້ນ)', 'ວັນທີລາອອກ DD/MM/YYYY', 'ໝວດສາເຫດ', 'ສາເຫດລາອອກ (ລາຍລະອຽດ)', 'ໝາຍເຫດ'];
-  const examples = [
+  const exampleRows = [
     ['lao', 'LW-0001', 'ບຸນມີ', 'ວົງສະຫວັນ', '01/03/2025', 'voluntary', 'ຍ້າຍໄປເຮັດວຽກບ່ອນອື່ນ', ''],
     ['lao', 'LW-0007', 'ສົມສະໜຸກ', 'ພົມມະວົງ', '05/03/2025', 'terminated', 'ຂາດວຽກຕິດຕໍ່ກັນເກີນກຳນົດ', 'ແຈ້ງລ່ວງໜ້າ 3 ວັນ'],
     ['fn', 'FN-0012', 'John', 'Smith', '10/03/2025', 'contract_end', 'ໝົດສັນຍາຈ້າງງານ ບໍ່ຕໍ່ອາຍຸ', ''],
     ['fn', 'FN-0025', 'Li', 'Wei', '15/03/2025', 'completed', 'ສຳເລັດສັນຍາ ກັບປະເທດຕົ້ນທາງ', 'ອອກປະເທດ 20/03/2025'],
     ['fnr', 'FNR-0003', 'Somsak', 'Kaew', '20/03/2025', 'no_renewal', 'ຕໍ່ອາຍຸເອກະສານແລ້ວ ແຕ່ຂໍລາອອກພາຍຫຼັງ', ''],
   ];
-  const catNote = ['ໝວດສາເຫດທີ່ໃຊ້ໄດ້:', 'voluntary=ລາອອກເອງ, contract_end=ໝົດສັນຍາ/ບໍ່ຕໍ່ອາຍຸFN, no_renewal=ຕໍ່FNRແລ້ວແຕ່ຂໍລາອອກ, terminated=ຖືກໄລ່ອອກ, completed=ສຳເລັດສັນຍາ/ກັບປະເທດ, other=ອື່ນໆ', '⚠️ ຊື່/ນາມສະກຸນ ໃຊ້ອ້າງອີງເທົ່ານັ້ນ — ລະບົບຄົ້ນຫາຈາກ "ID ທະບຽນ" ເທົ່ານັ້ນ ບໍ່ໄດ້ໃຊ້ຊື່ໃນການຄົ້ນຫາ', '', '', '', '', ''];
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...examples, catNote]);
-  ws['!cols'] = headers.map(() => ({ wch: 24 }));
-  forceExcelTextColumns(ws, [4], examples.length + 1);
-  XLSX.utils.book_append_sheet(wb, ws, 'Resign_Bulk');
-  XLSX.writeFile(wb, 'Resignation_Bulk_Template.xlsx');
+  const noteRows = [
+    ['ໝວດສາເຫດທີ່ໃຊ້ໄດ້:', 'voluntary=ລາອອກເອງ, contract_end=ໝົດສັນຍາ/ບໍ່ຕໍ່ອາຍຸFN, no_renewal=ຕໍ່FNRແລ້ວແຕ່ຂໍລາອອກ, terminated=ຖືກໄລ່ອອກ, completed=ສຳເລັດສັນຍາ/ກັບປະເທດ, other=ອື່ນໆ', '⚠️ ຊື່/ນາມສະກຸນ ໃຊ້ອ້າງອີງເທົ່ານັ້ນ — ລະບົບຄົ້ນຫາຈາກ "ID ທະບຽນ" ເທົ່ານັ້ນ ບໍ່ໄດ້ໃຊ້ຊື່ໃນການຄົ້ນຫາ', '', '', '', '', ''],
+  ];
+  buildStyledTemplateXlsx({ headers, exampleRows, lastNameColIdx: null, sheetName: 'Resign_Bulk', filename: 'Resignation_Bulk_Template.xlsx', noteRows });
 }
 
 async function handleResignBulkExcel(file) {
