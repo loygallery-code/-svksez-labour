@@ -5559,7 +5559,7 @@ async function loadFwNewWorkers() {
   _fnAllWorkersCache = await attachCompanyInfo(all || []);
 }
 
-// navigate to FNR page with pre-selected worker
+// navigate to FNR page and pre-fill search (ບໍ່ຟ້າວເປີດ form ຕໍ່ອາຍຸໃຫ້ອັດຕະໂນມັດ — ໃຫ້ບໍລິສັດກົດເລືອກເອງ)
 function goToRenewWorker(workerId) {
   sessionStorage.setItem('fnrPreSelectId', workerId);
   loadPage('fwRenewDocs');
@@ -6187,7 +6187,14 @@ async function loadFwRenewDocsData() {
   const preSelectId = sessionStorage.getItem('fnrPreSelectId');
   if (preSelectId) {
     sessionStorage.removeItem('fnrPreSelectId');
-    selectFnrWorkerById(preSelectId);
+    // ບໍ່ຟ້າວເປີດ form ຕໍ່ອາຍຸອັດຕະໂນມັດ — ພຽງແຕ່ຄົ້ນຫາຄົນນັ້ນໃຫ້ໄວ້ ໃຫ້ບໍລິສັດກົດເລືອກເອງເມື່ອພ້ອມ
+    const w = (_fnAllWorkersCache || []).find(x => x.id === preSelectId);
+    const searchInput = document.getElementById('fnrSearchInput');
+    if (w && searchInput) {
+      searchInput.value = `${w.firstname || ''} ${w.lastname || ''}`.trim();
+      doFnrSearch();
+      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
   loadFnrHistory();
 }
