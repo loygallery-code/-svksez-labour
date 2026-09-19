@@ -899,6 +899,8 @@ async function checkNotifications() {
   }
 
   const badge = document.getElementById('notifCount');
+  // ຈັດລຽງແຈ້ງເຕືອນ: ໃໝ່ລ່າສຸດ (ຄຳຮ້ອງ/ອະນຸມັດ/ປະຕິເສດ ທີ່ກວດຫຼ້າສຸດ) ຂຶ້ນເທິງ, ແຈ້ງເຕືອນເອກະສານໝົດອາຍຸ (ຄົງຕົວ ບໍ່ປ່ຽນທຸກມື້) ໄວ້ລຸ່ມ
+  notifications.reverse();
   if (notifications.length > 0) {
     badge.style.display = 'inline-flex';
     badge.textContent = notifications.length;
@@ -5107,8 +5109,10 @@ async function saveFnWorker() {
   if (syncErr) {
     console.error('Sync error:', syncErr);
     alert(`⚠️ ບັນທຶກສຳເລັດ (ID: ${regId}) — ແຕ່ Sync ສະຖິຕິ ຕປທ ມີບັນຫາ: ${syncErr.message}\nກົດ "🔄 Sync" ໃນໜ້າ "ຂໍ້ມູນ ແລະ ສະຖິຕິ" ດ້ວຍຕົນເອງ`);
+  } else if (!id) {
+    alert(`✅ ສຳເລັດແລ້ວ! ການລົງທະບຽນແຮງງານຕ່າງປະເທດໃໝ່ສຳເລັດແລ້ວ\nID ທະບຽນ: ${regId}`);
   } else {
-    alert(`✅ ບັນທຶກສຳເລັດ — ID ທະບຽນ: ${regId}\nຂໍ້ມູນ ຕປທ ໄດ້ Sync ໄປໃນ "ອັບເດດສະຖິຕິ" ທັນທີ`);
+    alert(`✅ ອັບເດດຂໍ້ມູນແຮງງານຕ່າງປະເທດສຳເລັດແລ້ວ — ID ທະບຽນ: ${regId}`);
   }
   closeModal('fnNewModal');
   if (document.getElementById('companyFnTable')) {
@@ -5375,7 +5379,7 @@ async function saveFnRenewal() {
   // find old FN reg_id for display (ຄົງທີ່ — ບໍ່ປ່ຽນອີກຕໍ່ໄປ)
   const oldWorker = (_fnAllWorkersCache||[]).find(x => x.id === workerId);
   const oldId = oldWorker?.reg_id || 'FN-???';
-  alert(`✅ ບັນທຶກການຕໍ່ອາຍຸສຳເລັດ\n\n🆔 ID ທະບຽນ: ${oldId} (ຄົງທີ່)\n🔄 ນີ້ແມ່ນການຕໍ່ອາຍຸຄັ້ງທີ ${renewalNo}`);
+  alert(`✅ ສຳເລັດແລ້ວ! ການລົງທະບຽນຕໍ່ອາຍຸແຮງງານຕ່າງປະເທດໃໝ່ສຳເລັດແລ້ວ\n\n🆔 ID ທະບຽນ: ${oldId} (ຄົງທີ່)\n🔄 ນີ້ແມ່ນການຕໍ່ອາຍຸຄັ້ງທີ ${renewalNo}`);
 
   closeModal('fnrModal');
   document.getElementById('fnrModalBody').innerHTML = '';
@@ -6569,6 +6573,7 @@ async function generateLetterFromSelected() {
       } catch(e) { window._currentFwRequestDbId = null; }
 
       // Open official documents immediately
+      alert('✅ ສຳເລັດແລ້ວ! ການສ້າງໃບສະເໜີສຳເລັດແລ້ວ');
       printFwRequestLetter();
 
     } catch(e) {
@@ -7384,6 +7389,11 @@ async function saveLaoWorker() {
     }
     document.getElementById('laoWorkerModal').style.display = 'none';
     loadLaoWorkers();
+    if (!id) {
+      alert('✅ ສຳເລັດແລ້ວ! ການລົງທະບຽນແຮງງານລາວໃໝ່ສຳເລັດແລ້ວ');
+    } else {
+      alert('✅ ອັບເດດຂໍ້ມູນແຮງງານລາວສຳເລັດແລ້ວ');
+    }
   } catch(e) { alert('ເກີດຂໍ້ຜິດພາດ: '+e.message); }
   finally { if (btn) { btn.disabled=false; btn.textContent='💾 ບັນທຶກ'; } }
 }
@@ -9363,7 +9373,7 @@ async function saveResignation() {
       try { await syncForeignWorkersToRecords(coId); } catch(e){}
     }
 
-    alert(`✅ ບັນທຶກການລາອອກສຳເລັດ\n\nID ພະນັກງານລາອອກ: ${erId}\nຊື່: ${w?.firstname||''} ${w?.lastname||''}\nໄດ້ລຶບອອກຈາກລາຍຊື່ພະນັກງານບໍລິສັດແລ້ວ`);
+    alert(`✅ ສຳເລັດແລ້ວ! ການບັນທຶກພະນັກງານອອກວຽກສຳເລັດແລ້ວ\n\nID ພະນັກງານລາອອກ: ${erId}\nຊື່: ${w?.firstname||''} ${w?.lastname||''}\nໄດ້ລຶບອອກຈາກລາຍຊື່ພະນັກງານບໍລິສັດແລ້ວ`);
     document.getElementById('resignModal').classList.remove('show');
     if(currentUser.role==='admin') loadResignationsAdmin(); else loadResignationsCompany();
   } catch(e){alert('ເກີດຂໍ້ຜິດພາດ: '+e.message);}
