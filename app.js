@@ -1161,8 +1161,7 @@ function pageDashboard() {
           <text id="dashLatestYearAxisLabel" x="296.7" y="140" text-anchor="middle" font-size="6.5" fill="#374151">...</text>
         </svg>
         <div style="display:flex;justify-content:center;gap:12px;margin-top:1px;font-size:7px;color:#374151;">
-          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#8ED0F0,#1E88E5,#0D47A1);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
-          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#D9A9E6,#9C27B0,#5E1268);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
+          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#8ED0F0,#1E88E5,#0D47A1);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ແຮງງານທັງໝົດ (ລາວ + ຕ່າງປະເທດ)</span><span class="i18n-en">Total workforce (Lao + Foreign)</span></span>
         </div>
       </div>
     </div>
