@@ -498,28 +498,31 @@ function buildSidebar() {
     `;
   } else if (currentUser.role === 'admin' || currentUser.role === 'director' || currentUser.role === 'viewer') {
     const isAdmin = currentUser.role === 'admin';
+    // ສະເພາະ director — ໃຫ້ຫົວຂໍ້ໃນ sidebar ປ່ຽນເປັນພາສາອັງກິດນຳໄດ້ເມື່ອກົດປຸ່ມ EN ຢູ່ໜ້າ Dashboard (admin/viewer ຍັງເປັນລາວຢ່າງດຽວຄືເດີມ)
+    const navEn = currentUser.role === 'director';
+    const L = (la, en) => navEn ? `<span class="i18n-la">${la}</span><span class="i18n-en">${en}</span>` : la;
     menu.innerHTML = `
-      <li><div class="sidebar-section">ຫຼັກ</div></li>
-      <li><a href="#" onclick="loadPage('dashboard')" class="active"><span class="icon">📊</span>ພາບລວມລະບົບ</a></li>
-      <li><a href="#" onclick="loadPage('companies')"><span class="icon">🏭</span>ຂໍ້ມູນບໍລິສັດ</a></li>
+      <li><div class="sidebar-section">${L('ຫຼັກ','Main')}</div></li>
+      <li><a href="#" onclick="loadPage('dashboard')" class="active"><span class="icon">📊</span>${L('ພາບລວມລະບົບ','Overview')}</a></li>
+      <li><a href="#" onclick="loadPage('companies')"><span class="icon">🏭</span>${L('ຂໍ້ມູນບໍລິສັດ','Company Data')}</a></li>
       ${isAdmin ? `<li><a href="#" onclick="loadPage('manageUsers')"><span class="icon">👥</span>ຈັດການ Users</a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('auditLog')"><span class="icon">🕵️</span>Audit Log<span id="auditNotifBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('companyArchive')"><span class="icon">🗄️</span>ຄັງຂໍ້ມູນບໍລິສັດ</a></li>` : ''}
       ${isAdmin ? `<li><a href="https://email.godaddy.com" target="_blank" rel="noopener"><span class="icon">📧</span>ອີເມວ (SEZA) ↗️</a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('passwordResetRequests')"><span class="icon">🔑</span>ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່<span id="pwResetBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('expiryNotifLog')"><span class="icon">📋</span>ສະຫຼຸບແຈ້ງເຕືອນເອກະສານໝົດອາຍຸ</a></li>` : ''}
-      <li><div class="sidebar-section">ສະຖິຕິ</div></li>
-      <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>ແຮງງານທັງໝົດ</a></li>
-      <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>ແຮງງານຕ່າງປະເທດ</a></li>
-      <li><a href="#" onclick="loadPage('monthlyReport')"><span class="icon">📊</span>ສະຖິຕິປະຈຳປີ</a></li>
+      <li><div class="sidebar-section">${L('ສະຖິຕິ','Statistics')}</div></li>
+      <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>${L('ແຮງງານທັງໝົດ','All Workforce')}</a></li>
+      <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>${L('ແຮງງານຕ່າງປະເທດ','Foreign Workforce')}</a></li>
+      <li><a href="#" onclick="loadPage('monthlyReport')"><span class="icon">📊</span>${L('ສະຖິຕິປະຈຳປີ','Annual Statistics')}</a></li>
       ${isAdmin ? `<li><a href="#" onclick="loadPage('empMovement')"><span class="icon">👥</span>ຂໍ້ມູນສະຖິຕິເລີ່ມຕົ້ນ</a></li>` : ''}
-      <li><div class="sidebar-section">ລົງທະບຽນແຮງງານ ຕປທ</div></li>
-      <li><a href="#" onclick="loadPage('fnNew')"><span class="icon">🆔</span>ລົງທະບຽນເຂົ້າໃໝ່ (FN)</a></li>
-      <li><a href="#" onclick="loadPage('fwRequestsAdmin')"><span class="icon">📥</span>ຄຳຂໍຈາກບໍລິສັດ</a></li>
-      <li><div class="sidebar-section">ລົງທະບຽນແຮງງານລາວ</div></li>
-      <li><a href="#" onclick="loadPage('laoWorkersAdmin')"><span class="icon">🇱🇦</span>ລາຍງານແຮງງານລາວ</a></li>
-      <li><div class="sidebar-section">ການເຄື່ອນໄຫວແຮງງານ</div></li>
-      <li><a href="#" onclick="loadPage('resignationsAdmin')"><span class="icon">🚪</span>ຕິດຕາມການລາອອກ</a></li>
+      <li><div class="sidebar-section">${L('ລົງທະບຽນແຮງງານ ຕປທ','Foreign Worker Registration')}</div></li>
+      <li><a href="#" onclick="loadPage('fnNew')"><span class="icon">🆔</span>${L('ລົງທະບຽນເຂົ້າໃໝ່ (FN)','New Registration (FN)')}</a></li>
+      <li><a href="#" onclick="loadPage('fwRequestsAdmin')"><span class="icon">📥</span>${L('ຄຳຂໍຈາກບໍລິສັດ','Requests from Companies')}</a></li>
+      <li><div class="sidebar-section">${L('ລົງທະບຽນແຮງງານລາວ','Lao Worker Registration')}</div></li>
+      <li><a href="#" onclick="loadPage('laoWorkersAdmin')"><span class="icon">🇱🇦</span>${L('ລາຍງານແຮງງານລາວ','Lao Worker Report')}</a></li>
+      <li><div class="sidebar-section">${L('ການເຄື່ອນໄຫວແຮງງານ','Labour Movement')}</div></li>
+      <li><a href="#" onclick="loadPage('resignationsAdmin')"><span class="icon">🚪</span>${L('ຕິດຕາມການລາອອກ','Resignation Tracking')}</a></li>
     `;
   } else {
     menu.innerHTML = `
