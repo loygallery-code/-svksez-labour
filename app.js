@@ -423,6 +423,18 @@ async function initApp() {
       const printStyle = document.createElement('style');
       printStyle.textContent = `#printReportNavBtn { display: inline-flex !important; }`;
       document.head.appendChild(printStyle);
+
+      // ອະນຸຍາດພິເສດ (ຊົ່ວຄາວ): ໃຫ້ print_only ເພີ່ມຂໍ້ມູນບໍລິສັດໃໝ່ໄດ້ (ຊ່ວຍປ້ອນຂໍ້ມູນເບື້ອງຕົ້ນ)
+      // ເມື່ອວຽກເພີ່ມຂໍ້ມູນສຳເລັດແລ້ວ ໃຫ້ລຶບ block ນີ້ອອກ (ຫຼືປ່ຽນ role ຂອງຢູດເຊີກັບຄືນ) ເພື່ອຄືນສິດ read-only ຕາມເດີມ
+      const printOnlyAddCompanyStyle = document.createElement('style');
+      printOnlyAddCompanyStyle.id = 'printOnlyAddCompanyTempStyle';
+      printOnlyAddCompanyStyle.textContent = `
+        #mainContent button.btn-success[onclick="openAddCompany()"] { display: inline-flex !important; }
+        #companyModal .btn-primary[onclick="saveCompany()"] { display: inline-flex !important; }
+        #companyModal button[onclick="addExtraDoc()"] { display: inline-flex !important; }
+        #companyModal button[onclick*="triggerCompanyDocUpload"] { display: inline-flex !important; }
+      `;
+      document.head.appendChild(printOnlyAddCompanyStyle);
     }
     // ສຳລັບ director roles — hide ປຸ່ມ window.print() ຍ່ອຍໃນໜ້າຕ່າງໆ
     if (currentUser.role === 'director') {
