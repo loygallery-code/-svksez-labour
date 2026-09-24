@@ -1135,30 +1135,30 @@ function pageDashboard() {
           <text x="36" y="72" text-anchor="end" font-size="6" fill="#888">4k</text>
           <text x="36" y="41.5" text-anchor="end" font-size="6" fill="#888">6k</text>
           <text x="36" y="12" text-anchor="end" font-size="6" fill="#888">8k</text>
+          <!-- 2021 -->
+          <rect x="53.3" y="72.8" width="20" height="57.2" rx="2" fill="url(#gradLaoDark)"/>
+          <text x="63.3" y="68.8" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">3,753</text>
+          <text x="63.3" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2021</text>
+          <!-- 2022 -->
+          <rect x="100.0" y="67.2" width="20" height="62.8" rx="2" fill="url(#gradLaoDark)"/>
+          <text x="110.0" y="63.2" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">4,115</text>
+          <text x="110.0" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2022</text>
           <!-- 2023 -->
-          <rect x="61" y="65.8" width="16" height="64.2" rx="2" fill="url(#gradLaoDark)"/>
-          <rect x="80" y="126.1" width="9" height="3.9" rx="1" fill="url(#gradForeign)"/>
-          <text x="69" y="62" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">4208</text>
-          <text x="84.5" y="123" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">253</text>
-          <text x="75" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2023</text>
+          <rect x="146.7" y="62.0" width="20" height="68.0" rx="2" fill="url(#gradLaoDark)"/>
+          <text x="156.7" y="58.0" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">4,461</text>
+          <text x="156.7" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2023</text>
           <!-- 2024 -->
-          <rect x="131" y="47" width="16" height="83" rx="2" fill="url(#gradLaoDark)"/>
-          <rect x="150" y="122.5" width="9" height="7.5" rx="1" fill="url(#gradForeign)"/>
-          <text x="139" y="43" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">5441</text>
-          <text x="154.5" y="119.5" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">493</text>
-          <text x="145" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2024</text>
+          <rect x="193.3" y="37.3" width="20" height="92.7" rx="2" fill="url(#gradLaoDark)"/>
+          <text x="203.3" y="33.3" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">6,080</text>
+          <text x="203.3" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2024</text>
           <!-- 2025 -->
-          <rect x="201" y="36" width="16" height="94" rx="2" fill="url(#gradLaoDark)"/>
-          <rect x="220" y="121.8" width="9" height="8.2" rx="1" fill="url(#gradForeign)"/>
-          <text x="209" y="32" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">6160</text>
-          <text x="224.5" y="118.8" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">537</text>
-          <text x="215" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2025</text>
-          <!-- Latest (current) partial year — lighter blue, values set live from real database totals in loadDashboard() -->
-          <rect id="dashCurLaoBar" x="271" y="130" width="16" height="0" rx="2" fill="url(#gradLaoLight)"/>
-          <rect id="dashCurForBar" x="290" y="130" width="9" height="0" rx="1" fill="url(#gradForeign)"/>
-          <text id="dashCurLaoLabel" x="279" y="122" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">...</text>
-          <text id="dashCurForLabel" x="294.5" y="122" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">...</text>
-          <text id="dashLatestYearAxisLabel" x="285" y="140" text-anchor="middle" font-size="6.5" fill="#374151">...</text>
+          <rect x="240.0" y="27.9" width="20" height="102.1" rx="2" fill="url(#gradLaoDark)"/>
+          <text x="250.0" y="23.9" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">6,697</text>
+          <text x="250.0" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2025</text>
+          <!-- Latest (current) partial year — total (lao+foreign), value set live from real database totals in loadDashboard() -->
+          <rect id="dashCurBar" x="286.7" y="130" width="20" height="0" rx="2" fill="url(#gradLaoLight)"/>
+          <text id="dashCurLabel" x="296.7" y="122" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">...</text>
+          <text id="dashLatestYearAxisLabel" x="296.7" y="140" text-anchor="middle" font-size="6.5" fill="#374151">...</text>
         </svg>
         <div style="display:flex;justify-content:center;gap:12px;margin-top:1px;font-size:7px;color:#374151;">
           <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#8ED0F0,#1E88E5,#0D47A1);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
@@ -1520,29 +1520,18 @@ async function loadDashboard() {
   (function updateCurrentYearBar() {
     const plotBottom = 130, plotTop = 8, maxScale = 8000; // matches the compact chart's viewBox now embedded in the hero card
     const scale = (plotBottom - plotTop) / maxScale;
-    const laoBar = document.getElementById('dashCurLaoBar');
-    const forBar = document.getElementById('dashCurForBar');
-    const laoLabel = document.getElementById('dashCurLaoLabel');
-    const forLabel = document.getElementById('dashCurForLabel');
-    if (laoBar) {
-      const h = Math.max(totalLao * scale, totalLao > 0 ? 2 : 0);
-      laoBar.setAttribute('y', plotBottom - h);
-      laoBar.setAttribute('height', h);
+    const curBar = document.getElementById('dashCurBar');
+    const curLabel = document.getElementById('dashCurLabel');
+    const totalNow = totalLao + totalForeign; // ຂໍ້ມູນລວມທັງໝົດ (ລາວ+ຕ່າງປະເທດ) ຂອງເດືອນປັດຈຸບັນ
+    if (curBar) {
+      const h = Math.max(totalNow * scale, totalNow > 0 ? 2 : 0);
+      curBar.setAttribute('y', plotBottom - h);
+      curBar.setAttribute('height', h);
     }
-    if (forBar) {
-      const h = Math.max(totalForeign * scale, totalForeign > 0 ? 2 : 0);
-      forBar.setAttribute('y', plotBottom - h);
-      forBar.setAttribute('height', h);
-    }
-    if (laoLabel) {
-      const y = plotBottom - Math.max(totalLao * scale, 2) - 8;
-      laoLabel.setAttribute('y', y < 30 ? 30 : y);
-      laoLabel.textContent = totalLao;
-    }
-    if (forLabel) {
-      const y = plotBottom - Math.max(totalForeign * scale, 2) - 6;
-      forLabel.setAttribute('y', y);
-      forLabel.textContent = totalForeign;
+    if (curLabel) {
+      const y = plotBottom - Math.max(totalNow * scale, 2) - 4;
+      curLabel.setAttribute('y', y < 20 ? 20 : y);
+      curLabel.textContent = totalNow.toLocaleString();
     }
   })();
 
