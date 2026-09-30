@@ -3755,9 +3755,15 @@ function exportSearchResult() {
 // ============================================================
 function closeModal(id) { document.getElementById(id)?.classList.remove('show'); }
 
-// Close modal on overlay click
+// Close modal on overlay click — ຢືນຢັນກ່ອນປິດ ເພື່ອບໍ່ໃຫ້ຂໍ້ມູນທີ່ພິມ/ເລືອກໄວ້ໃນຟອມຫາຍໄປ ຖ້າກົດພື້ນທີ່ນອກກ່ອງໂດຍບໍ່ຕັ້ງໃຈ
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      if (confirm('ຂໍ້ມູນທີ່ພິມ ຫຼື ເລືອກໄວ້ໃນຟອມນີ້ຈະບໍ່ຖືກບັນທຶກ ຕ້ອງການປິດແທ້ບໍ?')) {
+        overlay.classList.remove('show');
+      }
+    }
+  });
 });
 
 // Load dashboard data after page build
@@ -4515,6 +4521,8 @@ function initCustomDatePickers(containerEl) {
   });
 }
 
+const _CDP_NATIVE_VALUE_DESC = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+
 function _buildCDP(inp) {
   // Hide the native input but keep it in the DOM so existing code still reads .value
   inp.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;';
@@ -4589,18 +4597,39 @@ function _buildCDP(inp) {
 
   inp.insertAdjacentElement('afterend', wrapper);
 
-  // If native input already has a value, populate fields
-  if (inp.value) {
-    const [y,m,d] = inp.value.split('-');
-    fDay.value = d || ''; fMon.value = m || ''; fYr.value = y || '';
+  // ອັບເດດ 3 ຊ່ອງທີ່ເຫັນ (DD/MM/YYYY) ໃຫ້ກົງກັບຄ່າຈິງຂອງ input ທີ່ເຊື່ອງໄວ້ — ໃຊ້ທັງຕອນສ້າງເທື່ອທຳອິດ
+  // ແລະທຸກຄັ້ງທີ່ໂຄດບ່ອນອື່ນຕັ້ງຄ່າ .value ດ້ວຍໂຄດ (ເຊັ່ນ ລ້າງຟອມຕອນເປີດ "ເພີ່ມໃໝ່", ຫຼືໃສ່ຄ່າຕອນເປີດ "ແກ້ໄຂ")
+  // ຖ້າບໍ່ມີການ sync ນີ້ ໂຕເລກເກົ່າຈະຄ້າງຢູ່ໜ້າຈໍ ເຖິງວ່າຄ່າແທ້ຂອງ input ຈະຖືກລ້າງ/ປ່ຽນໄປແລ້ວກໍ່ຕາມ
+  function _cdpRenderFromValue() {
+    if (inp.value) {
+      const [y,m,d] = inp.value.split('-');
+      fDay.value = d || ''; fMon.value = m || ''; fYr.value = y || '';
+    } else {
+      fDay.value = ''; fMon.value = ''; fYr.value = '';
+    }
   }
+  _cdpRenderFromValue();
 
-  // Handle focus styles
+  // ດັກຈັບທຸກຄັ້ງທີ່ໂຄດຂ້າງນອກ (ບໍ່ແມ່ນການພິມໃນ 3 ຊ່ອງນີ້ເອງ) ຕັ້ງ inp.value ໂດຍກົງ — ໃຫ້ 3 ຊ່ອງທີ່ເຫັນອັບເດດຕາມທັນທີ.
+  // ໝາຍເຫດ: _cdpSync (ຕອນພິມພາຍໃນ 3 ຊ່ອງເອງ) ຈະຂ້າມການ resync ນີ້ໂດຍຕັ້ງໃຈ (ໃຊ້ _CDP_NATIVE_VALUE_DESC ໂດຍກົງ)
+  // ບໍ່ດັ່ງນັ້ນ ການພິມເລກ 2 ຫຼັກ (ເຊັ່ນ ເດືອນ 11, 12) ຈະຖືກແກ່ງໃຫ້ປົກກະຕິ (ຄືກັນກັບພິມ "1" ແລ້ວຄ່າຖືກ normalize ເປັນ "01" ທັນທີ ພິມໂຕທີ 2 ບໍ່ໄດ້ອີກ)
+  Object.defineProperty(inp, 'value', {
+    configurable: true,
+    get() { return _CDP_NATIVE_VALUE_DESC.get.call(inp); },
+    set(v) { _CDP_NATIVE_VALUE_DESC.set.call(inp, v); _cdpRenderFromValue(); }
+  });
+
+  // Handle focus styles — ກົດໃສ່ຊ່ອງ DD/MM/YYYY ອັນໃດອັນໜຶ່ງໂດຍກົງ ຕ້ອງໂຟກັດຊ່ອງນັ້ນ (ບໍ່ແມ່ນແກ່ງກັບຄືນໄປຊ່ອງ DD ສະເໝີ).
+  // ໂຕເລືອກ (selector) ເກົ່າຜິດ ('.cdp-wrap>div' ບໍ່ກົງກັບ element ລູກໃດເລີຍ ເພາະລູກແມ່ນ input/span/button)
+  // ຈຶ່ງເຮັດໃຫ້ທຸກຄັ້ງທີ່ກົດໃສ່ຊ່ອງ MM ຫຼື YYYY ຖືກແກ່ງກັບຄືນໄປຊ່ອງ DD ທັນທີ — ນີ້ຄືສາເຫດຫຼັກທີ່ "ຄີເຊີບໍ່ເຕັ້ນໄປຕາມທີ່ກຳນົດ"
   wrapper.addEventListener('click', e => {
-    if (!e.target.closest('.cdp-wrap>div')) fDay.focus();
+    const clickedAField = (e.target === fDay || e.target === fMon || e.target === fYr || e.target === yrBtn || yrList.contains(e.target));
+    if (!clickedAField) fDay.focus(); // ກົດພື້ນທີ່ວ່າງ (ຂອບ/ຊ່ອງຫວ່າງ) ຂອງກ່ອງ — ຄ່ອຍໄປ DD ໃຫ້
     wrapper.style.borderColor = '#2980b9';
   });
   [fDay, fMon, fYr].forEach(f => {
+    // ເລືອກໂຕເລກເກົ່າທັງໝົດທັນທີທີ່ກົດເຂົ້າຊ່ອງ ເພື່ອໃຫ້ພິມທັບແກ້ໄຂໄດ້ທັນທີ ບໍ່ຕ້ອງກົດລຶບເອງກ່ອນ
+    f.addEventListener('focus', () => f.select());
     f.addEventListener('blur', () => {
       setTimeout(() => {
         if (!wrapper.contains(document.activeElement)) wrapper.style.borderColor = '#ddd';
@@ -4639,7 +4668,8 @@ function _cdpSync(inp, fDay, fMon, fYr) {
   const dateStr = `${yv}-${m}-${d}`;
   const dt = new Date(dateStr + 'T00:00:00');
   if (!isNaN(dt.getTime())) {
-    inp.value = dateStr;
+    // ໃຊ້ setter ດິບ (ບໍ່ຜ່ານ property ທີ່ wrap ໄວ້) ເພື່ອບໍ່ໃຫ້ແກ່ງແກ້ໄຂ 3 ຊ່ອງທີ່ກຳລັງພິມຢູ່ຕອນນີ້
+    _CDP_NATIVE_VALUE_DESC.set.call(inp, dateStr);
     inp.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
