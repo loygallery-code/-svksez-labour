@@ -4590,10 +4590,24 @@ function _buildCDP(inp) {
 
   document.addEventListener('click', () => { yrList.style.display = 'none'; });
 
+  // ປຸ່ມລ້າງຄ່າ (✕) — ກົດເທື່ອດຽວລ້າງທັງ 3 ຊ່ອງ ແລະຄ່າແທ້ຂ້າງໃນໃຫ້ວ່າງເປົ່າທັນທີ ບໍ່ຕ້ອງກົດລຶບເອງເທື່ອລະໂຕ
+  const clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.textContent = '✕';
+  clearBtn.title = 'ລ້າງວັນທີ';
+  clearBtn.style.cssText = 'border:none;background:none;cursor:pointer;color:#c0392b;font-size:12px;padding:0 2px;line-height:1;margin-left:2px;';
+  clearBtn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    fDay.value = ''; fMon.value = ''; fYr.value = '';
+    _CDP_NATIVE_VALUE_DESC.set.call(inp, '');
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
+    fDay.focus();
+  });
+
   wrapper.appendChild(fDay); wrapper.appendChild(sep1);
   wrapper.appendChild(fMon); wrapper.appendChild(sep2);
   wrapper.appendChild(fYr);  wrapper.appendChild(yrBtn);
-  wrapper.appendChild(yrList);
+  wrapper.appendChild(yrList); wrapper.appendChild(clearBtn);
 
   inp.insertAdjacentElement('afterend', wrapper);
 
@@ -4623,7 +4637,7 @@ function _buildCDP(inp) {
   // ໂຕເລືອກ (selector) ເກົ່າຜິດ ('.cdp-wrap>div' ບໍ່ກົງກັບ element ລູກໃດເລີຍ ເພາະລູກແມ່ນ input/span/button)
   // ຈຶ່ງເຮັດໃຫ້ທຸກຄັ້ງທີ່ກົດໃສ່ຊ່ອງ MM ຫຼື YYYY ຖືກແກ່ງກັບຄືນໄປຊ່ອງ DD ທັນທີ — ນີ້ຄືສາເຫດຫຼັກທີ່ "ຄີເຊີບໍ່ເຕັ້ນໄປຕາມທີ່ກຳນົດ"
   wrapper.addEventListener('click', e => {
-    const clickedAField = (e.target === fDay || e.target === fMon || e.target === fYr || e.target === yrBtn || yrList.contains(e.target));
+    const clickedAField = (e.target === fDay || e.target === fMon || e.target === fYr || e.target === yrBtn || e.target === clearBtn || yrList.contains(e.target));
     if (!clickedAField) fDay.focus(); // ກົດພື້ນທີ່ວ່າງ (ຂອບ/ຊ່ອງຫວ່າງ) ຂອງກ່ອງ — ຄ່ອຍໄປ DD ໃຫ້
     wrapper.style.borderColor = '#2980b9';
   });
@@ -4662,6 +4676,13 @@ function _cdpSync(inp, fDay, fMon, fYr) {
   const dv = parseInt(fDay.value)||0;
   const mv = parseInt(fMon.value)||0;
   const yv = fYr.value;
+  // ຖ້າລຶບໂຕເລກໝົດທັງ 3 ຊ່ອງ (ວ່າງເປົ່າຄືນ) — ໃຫ້ຄ່າແທ້ຂ້າງໃນວ່າງເປົ່ານຳ. ຖ້າບໍ່ດັ່ງນັ້ນ ຄ່າແທ້ຈະຄ້າງຢູ່ວັນທີຫຼ້າສຸດທີ່ເຄີຍຄົບຖ້ວນຕະຫຼອດໄປ
+  // ເຖິງແມ່ນວ່າຈະລຶບໂຕເລກທີ່ເຫັນອອກໝົດແລ້ວກໍ່ຕາມ — ນີ້ຄືສາເຫດທີ່ "ລຶບບໍ່ໄດ້"
+  if (!fDay.value && !fMon.value && !fYr.value) {
+    _CDP_NATIVE_VALUE_DESC.set.call(inp, '');
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
   if (dv < 1 || dv > 31 || mv < 1 || mv > 12 || yv.length !== 4) return;
   const d = String(dv).padStart(2,'0');
   const m = String(mv).padStart(2,'0');
