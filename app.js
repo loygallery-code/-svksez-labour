@@ -423,18 +423,6 @@ async function initApp() {
       const printStyle = document.createElement('style');
       printStyle.textContent = `#printReportNavBtn { display: inline-flex !important; }`;
       document.head.appendChild(printStyle);
-
-      // ອະນຸຍາດພິເສດ (ຊົ່ວຄາວ): ໃຫ້ print_only ເພີ່ມຂໍ້ມູນບໍລິສັດໃໝ່ໄດ້ (ຊ່ວຍປ້ອນຂໍ້ມູນເບື້ອງຕົ້ນ)
-      // ເມື່ອວຽກເພີ່ມຂໍ້ມູນສຳເລັດແລ້ວ ໃຫ້ລຶບ block ນີ້ອອກ (ຫຼືປ່ຽນ role ຂອງຢູດເຊີກັບຄືນ) ເພື່ອຄືນສິດ read-only ຕາມເດີມ
-      const printOnlyAddCompanyStyle = document.createElement('style');
-      printOnlyAddCompanyStyle.id = 'printOnlyAddCompanyTempStyle';
-      printOnlyAddCompanyStyle.textContent = `
-        #mainContent button.btn-success[onclick="openAddCompany()"] { display: inline-flex !important; }
-        #companyModal .btn-primary[onclick="saveCompany()"] { display: inline-flex !important; }
-        #companyModal button[onclick="addExtraDoc()"] { display: inline-flex !important; }
-        #companyModal button[onclick*="triggerCompanyDocUpload"] { display: inline-flex !important; }
-      `;
-      document.head.appendChild(printOnlyAddCompanyStyle);
     }
     // ສຳລັບ director roles — hide ປຸ່ມ window.print() ຍ່ອຍໃນໜ້າຕ່າງໆ
     if (currentUser.role === 'director') {
@@ -498,31 +486,28 @@ function buildSidebar() {
     `;
   } else if (currentUser.role === 'admin' || currentUser.role === 'director' || currentUser.role === 'viewer') {
     const isAdmin = currentUser.role === 'admin';
-    // ສະເພາະ director — ໃຫ້ຫົວຂໍ້ໃນ sidebar ປ່ຽນເປັນພາສາອັງກິດນຳໄດ້ເມື່ອກົດປຸ່ມ EN ຢູ່ໜ້າ Dashboard (admin/viewer ຍັງເປັນລາວຢ່າງດຽວຄືເດີມ)
-    const navEn = currentUser.role === 'director';
-    const L = (la, en) => navEn ? `<span class="i18n-la">${la}</span><span class="i18n-en">${en}</span>` : la;
     menu.innerHTML = `
-      <li><div class="sidebar-section">${L('ຫຼັກ','Main')}</div></li>
-      <li><a href="#" onclick="loadPage('dashboard')" class="active"><span class="icon">📊</span>${L('ພາບລວມລະບົບ','Overview')}</a></li>
-      <li><a href="#" onclick="loadPage('companies')"><span class="icon">🏭</span>${L('ຂໍ້ມູນບໍລິສັດ','Company Data')}</a></li>
+      <li><div class="sidebar-section">ຫຼັກ</div></li>
+      <li><a href="#" onclick="loadPage('dashboard')" class="active"><span class="icon">📊</span>ພາບລວມລະບົບ</a></li>
+      <li><a href="#" onclick="loadPage('companies')"><span class="icon">🏭</span>ຂໍ້ມູນບໍລິສັດ</a></li>
       ${isAdmin ? `<li><a href="#" onclick="loadPage('manageUsers')"><span class="icon">👥</span>ຈັດການ Users</a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('auditLog')"><span class="icon">🕵️</span>Audit Log<span id="auditNotifBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('companyArchive')"><span class="icon">🗄️</span>ຄັງຂໍ້ມູນບໍລິສັດ</a></li>` : ''}
       ${isAdmin ? `<li><a href="https://email.godaddy.com" target="_blank" rel="noopener"><span class="icon">📧</span>ອີເມວ (SEZA) ↗️</a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('passwordResetRequests')"><span class="icon">🔑</span>ຄຳຮ້ອງຂໍລະຫັດຜ່ານໃໝ່<span id="pwResetBadge" class="notification-badge" style="display:none">0</span></a></li>` : ''}
       ${isAdmin ? `<li><a href="#" onclick="loadPage('expiryNotifLog')"><span class="icon">📋</span>ສະຫຼຸບແຈ້ງເຕືອນເອກະສານໝົດອາຍຸ</a></li>` : ''}
-      <li><div class="sidebar-section">${L('ສະຖິຕິ','Statistics')}</div></li>
-      <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>${L('ແຮງງານທັງໝົດ','All Workforce')}</a></li>
-      <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>${L('ແຮງງານຕ່າງປະເທດ','Foreign Workforce')}</a></li>
-      <li><a href="#" onclick="loadPage('monthlyReport')"><span class="icon">📊</span>${L('ສະຖິຕິປະຈຳປີ','Annual Statistics')}</a></li>
+      <li><div class="sidebar-section">ສະຖິຕິ</div></li>
+      <li><a href="#" onclick="loadPage('summary51')"><span class="icon">📋</span>ແຮງງານທັງໝົດ</a></li>
+      <li><a href="#" onclick="loadPage('summary52')"><span class="icon">🌏</span>ແຮງງານຕ່າງປະເທດ</a></li>
+      <li><a href="#" onclick="loadPage('monthlyReport')"><span class="icon">📊</span>ສະຖິຕິປະຈຳປີ</a></li>
       ${isAdmin ? `<li><a href="#" onclick="loadPage('empMovement')"><span class="icon">👥</span>ຂໍ້ມູນສະຖິຕິເລີ່ມຕົ້ນ</a></li>` : ''}
-      <li><div class="sidebar-section">${L('ລົງທະບຽນແຮງງານ ຕປທ','Foreign Worker Registration')}</div></li>
-      <li><a href="#" onclick="loadPage('fnNew')"><span class="icon">🆔</span>${L('ລົງທະບຽນເຂົ້າໃໝ່ (FN)','New Registration (FN)')}</a></li>
-      <li><a href="#" onclick="loadPage('fwRequestsAdmin')"><span class="icon">📥</span>${L('ຄຳຂໍຈາກບໍລິສັດ','Requests from Companies')}</a></li>
-      <li><div class="sidebar-section">${L('ລົງທະບຽນແຮງງານລາວ','Lao Worker Registration')}</div></li>
-      <li><a href="#" onclick="loadPage('laoWorkersAdmin')"><span class="icon">🇱🇦</span>${L('ລາຍງານແຮງງານລາວ','Lao Worker Report')}</a></li>
-      <li><div class="sidebar-section">${L('ການເຄື່ອນໄຫວແຮງງານ','Labour Movement')}</div></li>
-      <li><a href="#" onclick="loadPage('resignationsAdmin')"><span class="icon">🚪</span>${L('ຕິດຕາມການລາອອກ','Resignation Tracking')}</a></li>
+      <li><div class="sidebar-section">ລົງທະບຽນແຮງງານ ຕປທ</div></li>
+      <li><a href="#" onclick="loadPage('fnNew')"><span class="icon">🆔</span>ລົງທະບຽນເຂົ້າໃໝ່ (FN)</a></li>
+      <li><a href="#" onclick="loadPage('fwRequestsAdmin')"><span class="icon">📥</span>ຄຳຂໍຈາກບໍລິສັດ</a></li>
+      <li><div class="sidebar-section">ລົງທະບຽນແຮງງານລາວ</div></li>
+      <li><a href="#" onclick="loadPage('laoWorkersAdmin')"><span class="icon">🇱🇦</span>ລາຍງານແຮງງານລາວ</a></li>
+      <li><div class="sidebar-section">ການເຄື່ອນໄຫວແຮງງານ</div></li>
+      <li><a href="#" onclick="loadPage('resignationsAdmin')"><span class="icon">🚪</span>ຕິດຕາມການລາອອກ</a></li>
     `;
   } else {
     menu.innerHTML = `
@@ -548,7 +533,8 @@ async function loadCompanies() {
   const { data } = await sb.from('companies').select('*').order('zone').order('zone_number');
   allCompanies = data || [];
   // ບໍ່ຈຳກັດຮູບແບບຊື່ບັນຊີອີກຕໍ່ໄປ (ເຄີຍຈຳກັດແຄ່ SVKSEZ-/SSEZ@ ເຮັດໃຫ້ບໍລິສັດທີ່ຊື່ບັນຊີຮູບແບບອື່ນຖືກຕັດອອກຈາກສະຖິຕິລວມທັງໝົດໂດຍບໍ່ຕັ້ງໃຈ) — ໃຊ້ພຽງ is_active ແລະ ບໍ່ແມ່ນບັນຊີພິເສດ (admin/viewer) ເປັນເງື່ອນໄຂ
-  activeCompanies = allCompanies.filter(c => c.is_active !== false && !c.is_admin && !c.is_viewer);
+  // ຕັດບໍລິສັດທົດສອບ (ຊື່ຂຶ້ນຕົ້ນ "ທົດສອບ-") ອອກຈາກສະຖິຕິລວມທັງໝົດສະເໝີ — ບໍ່ໃຫ້ຂໍ້ມູນທົດສອບປົນກັບສະຖິຕິຈິງ (Dashboard, ສະຫຼຸບ 5.1/5.2 ແລະອື່ນໆ)
+  activeCompanies = allCompanies.filter(c => c.is_active !== false && !c.is_admin && !c.is_viewer && !String(c.name_lao||'').startsWith('ທົດສອບ-'));
 }
 
 // ============================================================
@@ -1150,33 +1136,34 @@ function pageDashboard() {
           <text x="36" y="72" text-anchor="end" font-size="6" fill="#888">4k</text>
           <text x="36" y="41.5" text-anchor="end" font-size="6" fill="#888">6k</text>
           <text x="36" y="12" text-anchor="end" font-size="6" fill="#888">8k</text>
-          <!-- 2021 -->
-          <rect x="53.3" y="72.8" width="20" height="57.2" rx="2" fill="url(#gradLaoDark)"/>
-          <text x="63.3" y="68.8" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">3,753</text>
-          <text x="63.3" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2021</text>
-          <!-- 2022 -->
-          <rect x="100.0" y="67.2" width="20" height="62.8" rx="2" fill="url(#gradLaoDark)"/>
-          <text x="110.0" y="63.2" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">4,115</text>
-          <text x="110.0" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2022</text>
           <!-- 2023 -->
-          <rect x="146.7" y="62.0" width="20" height="68.0" rx="2" fill="url(#gradLaoDark)"/>
-          <text x="156.7" y="58.0" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">4,461</text>
-          <text x="156.7" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2023</text>
+          <rect x="61" y="65.8" width="16" height="64.2" rx="2" fill="url(#gradLaoDark)"/>
+          <rect x="80" y="126.1" width="9" height="3.9" rx="1" fill="url(#gradForeign)"/>
+          <text x="69" y="62" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">4208</text>
+          <text x="84.5" y="123" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">253</text>
+          <text x="75" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2023</text>
           <!-- 2024 -->
-          <rect x="193.3" y="37.3" width="20" height="92.7" rx="2" fill="url(#gradLaoDark)"/>
-          <text x="203.3" y="33.3" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">6,080</text>
-          <text x="203.3" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2024</text>
+          <rect x="131" y="47" width="16" height="83" rx="2" fill="url(#gradLaoDark)"/>
+          <rect x="150" y="122.5" width="9" height="7.5" rx="1" fill="url(#gradForeign)"/>
+          <text x="139" y="43" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">5441</text>
+          <text x="154.5" y="119.5" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">493</text>
+          <text x="145" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2024</text>
           <!-- 2025 -->
-          <rect x="240.0" y="27.9" width="20" height="102.1" rx="2" fill="url(#gradLaoDark)"/>
-          <text x="250.0" y="23.9" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">6,697</text>
-          <text x="250.0" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2025</text>
-          <!-- Latest (current) partial year — total (lao+foreign), value set live from real database totals in loadDashboard() -->
-          <rect id="dashCurBar" x="286.7" y="130" width="20" height="0" rx="2" fill="url(#gradLaoLight)"/>
-          <text id="dashCurLabel" x="296.7" y="122" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">...</text>
-          <text id="dashLatestYearAxisLabel" x="296.7" y="140" text-anchor="middle" font-size="6.5" fill="#374151">...</text>
+          <rect x="201" y="36" width="16" height="94" rx="2" fill="url(#gradLaoDark)"/>
+          <rect x="220" y="121.8" width="9" height="8.2" rx="1" fill="url(#gradForeign)"/>
+          <text x="209" y="32" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">6160</text>
+          <text x="224.5" y="118.8" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">537</text>
+          <text x="215" y="140" text-anchor="middle" font-size="6.5" fill="#374151">2025</text>
+          <!-- Latest (current) partial year — lighter blue, values set live from real database totals in loadDashboard() -->
+          <rect id="dashCurLaoBar" x="271" y="130" width="16" height="0" rx="2" fill="url(#gradLaoLight)"/>
+          <rect id="dashCurForBar" x="290" y="130" width="9" height="0" rx="1" fill="url(#gradForeign)"/>
+          <text id="dashCurLaoLabel" x="279" y="122" text-anchor="middle" font-size="7" font-weight="700" fill="#1a1f36">...</text>
+          <text id="dashCurForLabel" x="294.5" y="122" text-anchor="middle" font-size="6" font-weight="700" fill="#1a1f36">...</text>
+          <text id="dashLatestYearAxisLabel" x="285" y="140" text-anchor="middle" font-size="6.5" fill="#374151">...</text>
         </svg>
         <div style="display:flex;justify-content:center;gap:12px;margin-top:1px;font-size:7px;color:#374151;">
-          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#8ED0F0,#1E88E5,#0D47A1);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ແຮງງານທັງໝົດ (ລາວ + ຕ່າງປະເທດ)</span><span class="i18n-en">Total workforce (Lao + Foreign)</span></span>
+          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#8ED0F0,#1E88E5,#0D47A1);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ລາວ</span><span class="i18n-en">Lao</span></span>
+          <span><span style="display:inline-block;width:7px;height:7px;background:linear-gradient(90deg,#D9A9E6,#9C27B0,#5E1268);border-radius:2px;margin-right:2px;vertical-align:middle;"></span><span class="i18n-la">ຕ່າງປະເທດ</span><span class="i18n-en">Foreigner</span></span>
         </div>
       </div>
     </div>
@@ -1534,18 +1521,29 @@ async function loadDashboard() {
   (function updateCurrentYearBar() {
     const plotBottom = 130, plotTop = 8, maxScale = 8000; // matches the compact chart's viewBox now embedded in the hero card
     const scale = (plotBottom - plotTop) / maxScale;
-    const curBar = document.getElementById('dashCurBar');
-    const curLabel = document.getElementById('dashCurLabel');
-    const totalNow = totalLao + totalForeign; // ຂໍ້ມູນລວມທັງໝົດ (ລາວ+ຕ່າງປະເທດ) ຂອງເດືອນປັດຈຸບັນ
-    if (curBar) {
-      const h = Math.max(totalNow * scale, totalNow > 0 ? 2 : 0);
-      curBar.setAttribute('y', plotBottom - h);
-      curBar.setAttribute('height', h);
+    const laoBar = document.getElementById('dashCurLaoBar');
+    const forBar = document.getElementById('dashCurForBar');
+    const laoLabel = document.getElementById('dashCurLaoLabel');
+    const forLabel = document.getElementById('dashCurForLabel');
+    if (laoBar) {
+      const h = Math.max(totalLao * scale, totalLao > 0 ? 2 : 0);
+      laoBar.setAttribute('y', plotBottom - h);
+      laoBar.setAttribute('height', h);
     }
-    if (curLabel) {
-      const y = plotBottom - Math.max(totalNow * scale, 2) - 4;
-      curLabel.setAttribute('y', y < 20 ? 20 : y);
-      curLabel.textContent = totalNow.toLocaleString();
+    if (forBar) {
+      const h = Math.max(totalForeign * scale, totalForeign > 0 ? 2 : 0);
+      forBar.setAttribute('y', plotBottom - h);
+      forBar.setAttribute('height', h);
+    }
+    if (laoLabel) {
+      const y = plotBottom - Math.max(totalLao * scale, 2) - 8;
+      laoLabel.setAttribute('y', y < 30 ? 30 : y);
+      laoLabel.textContent = totalLao;
+    }
+    if (forLabel) {
+      const y = plotBottom - Math.max(totalForeign * scale, 2) - 6;
+      forLabel.setAttribute('y', y);
+      forLabel.textContent = totalForeign;
     }
   })();
 
@@ -3755,15 +3753,9 @@ function exportSearchResult() {
 // ============================================================
 function closeModal(id) { document.getElementById(id)?.classList.remove('show'); }
 
-// Close modal on overlay click — ຢືນຢັນກ່ອນປິດ ເພື່ອບໍ່ໃຫ້ຂໍ້ມູນທີ່ພິມ/ເລືອກໄວ້ໃນຟອມຫາຍໄປ ຖ້າກົດພື້ນທີ່ນອກກ່ອງໂດຍບໍ່ຕັ້ງໃຈ
+// Close modal on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) {
-      if (confirm('ຂໍ້ມູນທີ່ພິມ ຫຼື ເລືອກໄວ້ໃນຟອມນີ້ຈະບໍ່ຖືກບັນທຶກ ຕ້ອງການປິດແທ້ບໍ?')) {
-        overlay.classList.remove('show');
-      }
-    }
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
 });
 
 // Load dashboard data after page build
@@ -4521,8 +4513,6 @@ function initCustomDatePickers(containerEl) {
   });
 }
 
-const _CDP_NATIVE_VALUE_DESC = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-
 function _buildCDP(inp) {
   // Hide the native input but keep it in the DOM so existing code still reads .value
   inp.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;';
@@ -4590,60 +4580,25 @@ function _buildCDP(inp) {
 
   document.addEventListener('click', () => { yrList.style.display = 'none'; });
 
-  // ປຸ່ມລ້າງຄ່າ (✕) — ກົດເທື່ອດຽວລ້າງທັງ 3 ຊ່ອງ ແລະຄ່າແທ້ຂ້າງໃນໃຫ້ວ່າງເປົ່າທັນທີ ບໍ່ຕ້ອງກົດລຶບເອງເທື່ອລະໂຕ
-  const clearBtn = document.createElement('button');
-  clearBtn.type = 'button';
-  clearBtn.textContent = '✕';
-  clearBtn.title = 'ລ້າງວັນທີ';
-  clearBtn.style.cssText = 'border:none;background:none;cursor:pointer;color:#c0392b;font-size:12px;padding:0 2px;line-height:1;margin-left:2px;';
-  clearBtn.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    fDay.value = ''; fMon.value = ''; fYr.value = '';
-    _CDP_NATIVE_VALUE_DESC.set.call(inp, '');
-    inp.dispatchEvent(new Event('change', { bubbles: true }));
-    fDay.focus();
-  });
-
   wrapper.appendChild(fDay); wrapper.appendChild(sep1);
   wrapper.appendChild(fMon); wrapper.appendChild(sep2);
   wrapper.appendChild(fYr);  wrapper.appendChild(yrBtn);
-  wrapper.appendChild(yrList); wrapper.appendChild(clearBtn);
+  wrapper.appendChild(yrList);
 
   inp.insertAdjacentElement('afterend', wrapper);
 
-  // ອັບເດດ 3 ຊ່ອງທີ່ເຫັນ (DD/MM/YYYY) ໃຫ້ກົງກັບຄ່າຈິງຂອງ input ທີ່ເຊື່ອງໄວ້ — ໃຊ້ທັງຕອນສ້າງເທື່ອທຳອິດ
-  // ແລະທຸກຄັ້ງທີ່ໂຄດບ່ອນອື່ນຕັ້ງຄ່າ .value ດ້ວຍໂຄດ (ເຊັ່ນ ລ້າງຟອມຕອນເປີດ "ເພີ່ມໃໝ່", ຫຼືໃສ່ຄ່າຕອນເປີດ "ແກ້ໄຂ")
-  // ຖ້າບໍ່ມີການ sync ນີ້ ໂຕເລກເກົ່າຈະຄ້າງຢູ່ໜ້າຈໍ ເຖິງວ່າຄ່າແທ້ຂອງ input ຈະຖືກລ້າງ/ປ່ຽນໄປແລ້ວກໍ່ຕາມ
-  function _cdpRenderFromValue() {
-    if (inp.value) {
-      const [y,m,d] = inp.value.split('-');
-      fDay.value = d || ''; fMon.value = m || ''; fYr.value = y || '';
-    } else {
-      fDay.value = ''; fMon.value = ''; fYr.value = '';
-    }
+  // If native input already has a value, populate fields
+  if (inp.value) {
+    const [y,m,d] = inp.value.split('-');
+    fDay.value = d || ''; fMon.value = m || ''; fYr.value = y || '';
   }
-  _cdpRenderFromValue();
 
-  // ດັກຈັບທຸກຄັ້ງທີ່ໂຄດຂ້າງນອກ (ບໍ່ແມ່ນການພິມໃນ 3 ຊ່ອງນີ້ເອງ) ຕັ້ງ inp.value ໂດຍກົງ — ໃຫ້ 3 ຊ່ອງທີ່ເຫັນອັບເດດຕາມທັນທີ.
-  // ໝາຍເຫດ: _cdpSync (ຕອນພິມພາຍໃນ 3 ຊ່ອງເອງ) ຈະຂ້າມການ resync ນີ້ໂດຍຕັ້ງໃຈ (ໃຊ້ _CDP_NATIVE_VALUE_DESC ໂດຍກົງ)
-  // ບໍ່ດັ່ງນັ້ນ ການພິມເລກ 2 ຫຼັກ (ເຊັ່ນ ເດືອນ 11, 12) ຈະຖືກແກ່ງໃຫ້ປົກກະຕິ (ຄືກັນກັບພິມ "1" ແລ້ວຄ່າຖືກ normalize ເປັນ "01" ທັນທີ ພິມໂຕທີ 2 ບໍ່ໄດ້ອີກ)
-  Object.defineProperty(inp, 'value', {
-    configurable: true,
-    get() { return _CDP_NATIVE_VALUE_DESC.get.call(inp); },
-    set(v) { _CDP_NATIVE_VALUE_DESC.set.call(inp, v); _cdpRenderFromValue(); }
-  });
-
-  // Handle focus styles — ກົດໃສ່ຊ່ອງ DD/MM/YYYY ອັນໃດອັນໜຶ່ງໂດຍກົງ ຕ້ອງໂຟກັດຊ່ອງນັ້ນ (ບໍ່ແມ່ນແກ່ງກັບຄືນໄປຊ່ອງ DD ສະເໝີ).
-  // ໂຕເລືອກ (selector) ເກົ່າຜິດ ('.cdp-wrap>div' ບໍ່ກົງກັບ element ລູກໃດເລີຍ ເພາະລູກແມ່ນ input/span/button)
-  // ຈຶ່ງເຮັດໃຫ້ທຸກຄັ້ງທີ່ກົດໃສ່ຊ່ອງ MM ຫຼື YYYY ຖືກແກ່ງກັບຄືນໄປຊ່ອງ DD ທັນທີ — ນີ້ຄືສາເຫດຫຼັກທີ່ "ຄີເຊີບໍ່ເຕັ້ນໄປຕາມທີ່ກຳນົດ"
+  // Handle focus styles
   wrapper.addEventListener('click', e => {
-    const clickedAField = (e.target === fDay || e.target === fMon || e.target === fYr || e.target === yrBtn || e.target === clearBtn || yrList.contains(e.target));
-    if (!clickedAField) fDay.focus(); // ກົດພື້ນທີ່ວ່າງ (ຂອບ/ຊ່ອງຫວ່າງ) ຂອງກ່ອງ — ຄ່ອຍໄປ DD ໃຫ້
+    if (!e.target.closest('.cdp-wrap>div')) fDay.focus();
     wrapper.style.borderColor = '#2980b9';
   });
   [fDay, fMon, fYr].forEach(f => {
-    // ເລືອກໂຕເລກເກົ່າທັງໝົດທັນທີທີ່ກົດເຂົ້າຊ່ອງ ເພື່ອໃຫ້ພິມທັບແກ້ໄຂໄດ້ທັນທີ ບໍ່ຕ້ອງກົດລຶບເອງກ່ອນ
-    f.addEventListener('focus', () => f.select());
     f.addEventListener('blur', () => {
       setTimeout(() => {
         if (!wrapper.contains(document.activeElement)) wrapper.style.borderColor = '#ddd';
@@ -4676,21 +4631,13 @@ function _cdpSync(inp, fDay, fMon, fYr) {
   const dv = parseInt(fDay.value)||0;
   const mv = parseInt(fMon.value)||0;
   const yv = fYr.value;
-  // ຖ້າລຶບໂຕເລກໝົດທັງ 3 ຊ່ອງ (ວ່າງເປົ່າຄືນ) — ໃຫ້ຄ່າແທ້ຂ້າງໃນວ່າງເປົ່ານຳ. ຖ້າບໍ່ດັ່ງນັ້ນ ຄ່າແທ້ຈະຄ້າງຢູ່ວັນທີຫຼ້າສຸດທີ່ເຄີຍຄົບຖ້ວນຕະຫຼອດໄປ
-  // ເຖິງແມ່ນວ່າຈະລຶບໂຕເລກທີ່ເຫັນອອກໝົດແລ້ວກໍ່ຕາມ — ນີ້ຄືສາເຫດທີ່ "ລຶບບໍ່ໄດ້"
-  if (!fDay.value && !fMon.value && !fYr.value) {
-    _CDP_NATIVE_VALUE_DESC.set.call(inp, '');
-    inp.dispatchEvent(new Event('change', { bubbles: true }));
-    return;
-  }
   if (dv < 1 || dv > 31 || mv < 1 || mv > 12 || yv.length !== 4) return;
   const d = String(dv).padStart(2,'0');
   const m = String(mv).padStart(2,'0');
   const dateStr = `${yv}-${m}-${d}`;
   const dt = new Date(dateStr + 'T00:00:00');
   if (!isNaN(dt.getTime())) {
-    // ໃຊ້ setter ດິບ (ບໍ່ຜ່ານ property ທີ່ wrap ໄວ້) ເພື່ອບໍ່ໃຫ້ແກ່ງແກ້ໄຂ 3 ຊ່ອງທີ່ກຳລັງພິມຢູ່ຕອນນີ້
-    _CDP_NATIVE_VALUE_DESC.set.call(inp, dateStr);
+    inp.value = dateStr;
     inp.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
