@@ -832,11 +832,11 @@ async function checkNotifications() {
           if (exp <= warn180 && exp > today && !seen.has(key)) {
             notifications.push({ type: 'warning', key,
               msg: `🛂 ໜັງສືເດີນທາງ ຂອງພະນັກງານ ${name} ແມ່ນຈະໝົດອາຍຸໃນອີກ 6 ເດືອນຂ້າງໜ້າແລ້ວ ກະລຸນາແຈ້ງໃຫ້ຜູ້ກ່ຽວຊາບດ້ວຍ`,
-              page: 'fwRequestCompany', detail });
+              page: 'fwRenewDocs', detail });
           } else if (exp <= today && !seen.has(key+'_exp')) {
             notifications.push({ type: 'danger', key: key+'_exp',
               msg: `🛂 ໜັງສືເດີນທາງ ຂອງພະນັກງານ ${name} ໝົດອາຍຸແລ້ວ`,
-              page: 'fwRequestCompany', detail });
+              page: 'fwRenewDocs', detail });
           }
         }
 
@@ -854,11 +854,11 @@ async function checkNotifications() {
           if (exp <= warn21 && exp > today && !seen.has(key)) {
             notifications.push({ type: 'warning', key,
               msg: `${label} ຂອງພະນັກງານ ${name} ຈະໝົດອາຍຸການໃຊ້ງານແລ້ວ ກະລຸນາຂຶ້ນທະບຽນຂໍຕໍ່ເອກະສານດ້ວຍ`,
-              page: 'fwRequestCompany', detail });
+              page: 'fwRenewDocs', detail });
           } else if (exp <= today && !seen.has(key+'_exp')) {
             notifications.push({ type: 'danger', key: key+'_exp',
               msg: `${label} ຂອງພະນັກງານ ${name} ໝົດອາຍຸແລ້ວ`,
-              page: 'fwRequestCompany', detail });
+              page: 'fwRenewDocs', detail });
           }
         });
       });
@@ -9475,7 +9475,12 @@ function doResignSearch() {
   const q=(document.getElementById('rsSearchInput')?.value||'').trim().toLowerCase();
   const list=document.getElementById('rsSearchList');
   if(!q){list.style.display='none';return;}
-  const matches=_rsWorkerCache.filter(w=>w._label.toLowerCase().includes(q)||(w.firstname||'').toLowerCase().includes(q));
+  // ຄົ້ນຫາທີລະຄຳ: ທຸກຄຳທີ່ພິມຕ້ອງພົບໃນ ID / ຄຳນຳໜ້າ / ຊື່ / ນາມສະກຸນ / ສັນຊາດ (ຮອງຮັບການພິມ "Ms PUTRI PRASETYO")
+  const words=q.split(/\s+/).filter(Boolean);
+  const matches=_rsWorkerCache.filter(w=>{
+    const hay=[w.reg_id,w.prefix,w.firstname,w.lastname,w.nationality].map(x=>String(x||'')).join(' ').toLowerCase();
+    return words.every(t=>hay.includes(t));
+  });
   if(!matches.length){list.innerHTML='<div style="padding:10px;color:#aaa;">ບໍ່ພົບ</div>';list.style.display='block';return;}
   list.style.display='block';
   list.innerHTML=matches.slice(0,12).map(w=>`<div class="autocomplete-item" onclick="selectResignWorker('${w.id}')"><b>${esc(w.reg_id)}</b> — ${esc(w.prefix||'')} ${esc(w.firstname)} ${esc(w.lastname)}</div>`).join('');
