@@ -5202,12 +5202,12 @@ function doFnrSearch() {
   const q = document.getElementById('fnrSearchInput').value.trim().toLowerCase();
   const list = document.getElementById('fnrSearchList');
   if (!q) { list.style.display = 'none'; return; }
-  const matches = _fnAllWorkersCache.filter(w =>
-    (w.firstname || '').toLowerCase().includes(q) ||
-    (w.lastname || '').toLowerCase().includes(q) ||
-    (w.reg_id || '').toLowerCase().includes(q) ||
-    (w.passport_no || '').toLowerCase().includes(q)
-  );
+  // ຄົ້ນຫາທີລະຄຳ: ທຸກຄຳທີ່ພິມຕ້ອງພົບໃນ ID / ຄຳນຳໜ້າ / ຊື່ / ນາມສະກຸນ / Passport / ສັນຊາດ (ຮອງຮັບການພິມຊື່ + ນາມສະກຸນ ເຊັ່ນ "David Chen")
+  const words = q.split(/\s+/).filter(Boolean);
+  const matches = _fnAllWorkersCache.filter(w => {
+    const hay = [w.reg_id, w.prefix, w.firstname, w.lastname, w.passport_no, w.nationality].map(x => String(x || '')).join(' ').toLowerCase();
+    return words.every(t => hay.includes(t));
+  });
   if (matches.length === 0) { list.innerHTML = '<div style="padding:10px;color:#aaa;">ບໍ່ພົບຂໍ້ມູນ</div>'; list.style.display = 'block'; return; }
   list.style.display = 'block';
   list.innerHTML = matches.slice(0, 15).map(w => `
@@ -6668,7 +6668,12 @@ async function generateLetterFromSelected() {
   if (checked.length > 10) { alert('ສາມາດເລືອກສູງສຸດ 10 ຄົນ ຕໍ່ໃບສະເໜີ'); return; }
 
   // ຕ້ອງຕື່ມຂໍ້ມູນໃບອະນຸຍາດໂຄຕ້າ + ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ (ເລກທີ/ວັນທີ/ໄຟລ໌ PDF) ກ່ອນ ຈຶ່ງຈະສ້າງໃບສະເໜີໄດ້
-  openFwQuotaInfoModal(async (quotaInfo) => {
+  // ການຂໍຕໍ່ອາຍຸເອກະສານ (renew) ບໍ່ຕ້ອງໃຊ້ໃບອະນຸຍາດໂກຕ້າ — ຖາມສະເພາະກໍລະນີແຮງງານເຂົ້າໃໝ່ (new)
+  const _letterTypeNow = document.getElementById('fwLetterType') ? document.getElementById('fwLetterType').value : 'new';
+  const _askQuota = (_letterTypeNow === 'renew')
+    ? (cb) => cb({ no: null, date: null, file: null })
+    : openFwQuotaInfoModal;
+  _askQuota(async (quotaInfo) => {
   openFwTaxInfoModal(async (taxInfo) => {
     const btn = document.querySelector('#fwLetterPanel .btn-primary');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ ກຳລັງສ້າງ...'; }
@@ -7921,9 +7926,9 @@ function printFwRequestLetter() {
   <div style="text-indent:2em;text-align:justify;font-size:12pt;margin:4px 0;">
     &nbsp;&nbsp;-&nbsp;&nbsp;ອີງຕາມ ໃບທະບຽນວິສາຫະກິດ ສະບັບເລກທີ ${co.biz_reg_no||'.................................'} ລົງວັນທີ ${fmtDMY(co.biz_reg_date)||'..........................'}
   </div>
-  <div style="text-indent:2em;text-align:justify;font-size:12pt;margin:4px 0;">
+  ${type === 'renew' ? '' : `<div style="text-indent:2em;text-align:justify;font-size:12pt;margin:4px 0;">
     &nbsp;&nbsp;-&nbsp;&nbsp;ອີງຕາມ ໃບອະນຸຍາດໂກຕ້ານຳໃຊ້ແຮງງານຕ່າງປະເທດ ສະບັບເລກທີ ${quotaInfo.no||'......................'}, ລົງວັນທີ ${fmtDMY(quotaInfo.date)||'......................'}
-  </div>
+  </div>`}
   <div style="text-indent:2em;text-align:justify;font-size:12pt;margin:4px 0;">
     &nbsp;&nbsp;-&nbsp;&nbsp;ອີງຕາມ ໃບຢັ້ງຢືນການເສຍອາກອນປະຈຳປີ ສະບັບເລກທີ ${taxInfo.no||'......................'}, ລົງວັນທີ ${fmtDMY(taxInfo.date)||'......................'}
   </div>
@@ -8173,9 +8178,9 @@ async function viewFwRequest(id) {
   const docsHtml = `
     <div style="background:#f7f9fb;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
       <div style="font-size:13px;font-weight:700;color:#154360;margin-bottom:8px;">📎 ເອກະສານຄັດຕິດ (ຈາກບໍລິສັດ)</div>
-      <div style="font-size:13px;margin-bottom:6px;">
+      ${r.request_type === 'renew' ? '' : `<div style="font-size:13px;margin-bottom:6px;">
         ${quotaUrl ? `<a href="${escAttr(quotaUrl)}" target="_blank" rel="noopener" style="color:#1769C2;font-weight:600;">📄 ໃບອະນຸຍາດໂຄຕ້າ (ເລກທີ ${esc(r.quota_no||'-')})</a>` : '<span style="color:#aaa;">- ບໍ່ມີໄຟລ໌ໃບໂຄຕ້າ -</span>'}
-      </div>
+      </div>`}
       <div style="font-size:13px;">
         ${taxUrl ? `<a href="${escAttr(taxUrl)}" target="_blank" rel="noopener" style="color:#1769C2;font-weight:600;">📄 ໃບແຈ້ງເສຍອາກອນປະຈຳປີ (ເລກທີ ${esc(r.tax_cert_no||'-')})</a>` : '<span style="color:#aaa;">- ບໍ່ມີໄຟລ໌ໃບອາກອນ -</span>'}
       </div>
@@ -8185,9 +8190,9 @@ async function viewFwRequest(id) {
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;cursor:pointer;">
         <input type="checkbox" id="fwCheckWorkers" ${r.checked_workers ? 'checked' : ''} onchange="updateFwRequestChecklist('${id}','checked_workers',this.checked)"> ກວດຂໍ້ມູນ/ບັນຊີລາຍຊື່ພະນັກງານແລ້ວ
       </label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;cursor:pointer;">
+      ${r.request_type === 'renew' ? '' : `<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;cursor:pointer;">
         <input type="checkbox" id="fwCheckQuota" ${r.checked_quota ? 'checked' : ''} onchange="updateFwRequestChecklist('${id}','checked_quota',this.checked)"> ກວດໃບອະນຸຍາດໂຄຕ້າແລ້ວ
-      </label>
+      </label>`}
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
         <input type="checkbox" id="fwCheckTax" ${r.checked_tax ? 'checked' : ''} onchange="updateFwRequestChecklist('${id}','checked_tax',this.checked)"> ກວດໃບແຈ້ງເສຍອາກອນປະຈຳປີແລ້ວ
       </label>
@@ -8337,9 +8342,10 @@ async function rejectFwRequest(id) {
 async function updateFwRequestChecklist(id, field, value) {
   const { error } = await sb.from('fw_requests').update({ [field]: value }).eq('id', id);
   if (error) { alert('ຜິດພາດ: ' + error.message); return; }
-  const { data: r } = await sb.from('fw_requests').select('checked_workers,checked_quota,checked_tax,status').eq('id', id).single();
+  const { data: r } = await sb.from('fw_requests').select('checked_workers,checked_quota,checked_tax,status,request_type').eq('id', id).single();
   if (!r) return;
-  const allChecked = r.checked_workers && r.checked_quota && r.checked_tax;
+  // ຂໍຕໍ່ອາຍຸເອກະສານ (renew) ບໍ່ມີໃບອະນຸຍາດໂຄຕ້າ — ບໍ່ຕ້ອງກວດຂໍ້ນີ້
+  const allChecked = r.checked_workers && (r.request_type === 'renew' || r.checked_quota) && r.checked_tax;
   const statusEl = document.getElementById('fwCheckStatus');
   if (allChecked && r.status !== 'reviewed') {
     await sb.from('fw_requests').update({ status: 'reviewed', reviewed_at: new Date().toISOString() }).eq('id', id);
