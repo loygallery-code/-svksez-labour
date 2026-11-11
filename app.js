@@ -964,6 +964,17 @@ function goToCompanyFromNotif(companyId, page) {
   }, 200);
 }
 
+// ກົດການແຈ້ງເຕືອນຈາກ Dashboard: ມີ detail ເປີດລາຍລະອຽດ, ບໍ່ດັ່ງນັ້ນໄປໜ້າທີ່ກ່ຽວຂ້ອງ
+function openNotifFromDash(idx) {
+  const n = notifications[idx];
+  if (!n) return;
+  if (n.detail) { viewSingleNotif(idx); return; }
+  if (currentUser.role === 'admin' && (n.page === 'fwRequestsAdmin' || n.page === 'fnNew' || !n.companyId)) {
+    loadPage(n.page || 'companies'); return;
+  }
+  goToCompanyFromNotif(n.companyId || '', n.page || 'companies');
+}
+
 function showNotifications() {
   const list = document.getElementById('notifList');
   if (notifications.length === 0) {
@@ -1652,25 +1663,17 @@ async function loadDashboard() {
     if(notifications.length === 0) {
       notifEl.innerHTML = '<div style="text-align:center;color:#27ae60;padding:20px 0;">✅ ບໍ່ມີການແຈ້ງເຕືອນ</div>';
     } else {
-      notifEl.innerHTML = notifications.slice(0,6).map(n => {
-        // Determine link target based on notification type
-        let linkHtml = '';
-        if(n.companyId) {
-          linkHtml = `<div style="margin-top:4px;">
-            <a href="#" onclick="goToCompanyFromNotif('${n.companyId||''}','${n.page||'companies'}')" 
-               style="font-size:11px;color:#2980b9;text-decoration:underline;">
-              🔍 ກົດເບິ່ງຂໍ້ມູນ →
-            </a>
-          </div>`;
-        }
+      notifEl.innerHTML = notifications.slice(0,6).map((n, idx) => {
+        // ຄລິກ: ມີ detail -> ເປີດໜ້າລາຍລະອຽດ, ບໍ່ມີ -> ໄປໜ້າທີ່ກ່ຽວຂ້ອງ
+        const linkHtml = `<div style="margin-top:4px;font-size:11px;color:#2980b9;text-decoration:underline;">🔍 ກົດເບິ່ງຂໍ້ມູນ →</div>`;
         return `<div class="alert alert-${n.type}" style="margin-bottom:8px;padding:8px 12px;font-size:12px;cursor:pointer;" 
-                     onclick="goToCompanyFromNotif('${n.companyId||''}','${n.page||'companies'}')">
+                     onclick="openNotifFromDash(${idx})">
           <div>${n.msg}</div>
           ${linkHtml}
         </div>`;
       }).join('') + (notifications.length>6 ? 
         `<div style="font-size:11px;color:#888;text-align:center;margin-top:4px;">+ ອີກ ${notifications.length-6} ລາຍການ — 
-          <a href="#" onclick="showNotifications()" style="color:#2980b9;">ເບິ່ງທັງໝົດ</a>
+          <a href="#" onclick="showNotifications();return false;" style="color:#2980b9;">ເບິ່ງທັງໝົດ</a>
         </div>` : '');
     }
   }
