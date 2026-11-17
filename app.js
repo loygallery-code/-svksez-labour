@@ -5109,12 +5109,24 @@ const EDIT_FIELD_LABELS = {
 const EDIT_FN_FIELDS  = ['prefix','firstname','lastname','nationality','gender','position','salary','dob','start_date','quota_no','quota_date','passport_no','passport_issue','passport_expiry','labour_card_no','labour_card_issue','labour_card_expiry','labour_card_count','residence_card_no','residence_card_issue','residence_card_expiry','visa_no','visa_issue','visa_expiry','stay_duration','photo_path','doc_files'];
 const EDIT_LAO_FIELDS = ['prefix','firstname','lastname','gender','education','position','status','probation_days','start_date','province','province_code'];
 let _pendingEditKeys = new Set();
+let _editCountMap = {};   // 'foreign:<id>' | 'lao:<id>' -> ຈຳນວນຄັ້ງທີ່ຖືກແກ້ໄຂ (ອະນຸມັດແລ້ວ)
 
 async function loadPendingEditKeys() {
   try {
-    const { data } = await sb.from('worker_edit_requests').select('worker_type,worker_id').eq('company_id', currentUser.companyId).eq('status', 'pending');
-    _pendingEditKeys = new Set((data || []).map(r => `${r.worker_type}:${r.worker_id}`));
-  } catch(e) { _pendingEditKeys = new Set(); }
+    const { data } = await sb.from('worker_edit_requests').select('worker_type,worker_id,status').eq('company_id', currentUser.companyId).in('status', ['pending','approved']);
+    _pendingEditKeys = new Set(); _editCountMap = {};
+    (data || []).forEach(r => {
+      const k = `${r.worker_type}:${r.worker_id}`;
+      if (r.status === 'pending') _pendingEditKeys.add(k);
+      else _editCountMap[k] = (_editCountMap[k] || 0) + 1;
+    });
+  } catch(e) { _pendingEditKeys = new Set(); _editCountMap = {}; }
+}
+
+// ປ້າຍ "ແກ້ໄຂແລ້ວ N ຄັ້ງ" ຂ້າງຊື່
+function editCountBadge(key) {
+  const n = _editCountMap[key] || 0;
+  return n ? ` <span title="ຂໍ້ມູນນີ້ຖືກແກ້ໄຂ (ແອັດມິນອະນຸມັດ) ແລ້ວ ${n} ຄັ້ງ" style="display:inline-block;background:#e8f0fe;color:#1a5276;border:1px solid #9ec5e8;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:600;white-space:nowrap;">✏️ ແກ້ແລ້ວ ${n} ຄັ້ງ</span>` : '';
 }
 
 function _editNorm(v) {
@@ -5886,7 +5898,7 @@ function renderFwNewWorkersTable(fnWorkers, fnrBanner) {
       return `<tr>
         <td>${thumb}</td>
         <td><b>${esc(w.reg_id)}</b></td>
-        <td>${esc(w.prefix || '')} ${esc(w.firstname)} ${esc(w.lastname)}</td>
+        <td>${esc(w.prefix || '')} ${esc(w.firstname)} ${esc(w.lastname)}${editCountBadge('foreign:' + w.id)}</td>
         <td>${esc(w.nationality || '-')}</td>
         <td>${w.gender || '-'}</td>
         <td><span class="${laborStatus.class}">${laborStatus.text}</span></td>
@@ -7600,7 +7612,7 @@ function renderLaoWorkerTable(workers) {
     <tbody>${workers.map((w,i)=>`
       <tr style="background:${i%2?'#f8f8f8':'#fff'}">
         <td style="padding:7px;color:#1a5276;font-weight:600;">${esc(w.reg_id||'-')}</td>
-        <td style="padding:7px;">${esc(w.prefix||'')} ${esc(w.firstname||'')} ${esc(w.lastname||'')}</td>
+        <td style="padding:7px;">${esc(w.prefix||'')} ${esc(w.firstname||'')} ${esc(w.lastname||'')}${editCountBadge('lao:' + w.id)}</td>
         <td style="padding:7px;text-align:center;">${w.gender||'-'}</td>
         <td style="padding:7px;">${esc(w.position||'-')}</td>
         <td style="padding:7px;text-align:center;">
