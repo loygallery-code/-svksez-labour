@@ -519,6 +519,7 @@ function buildSidebar() {
       <li><div class="sidebar-section">${L('ລົງທະບຽນແຮງງານ ຕປທ','Foreign Worker Registration')}</div></li>
       <li><a href="#" onclick="loadPage('fnNew')"><span class="icon">🆔</span>${L('ລົງທະບຽນເຂົ້າໃໝ່ (FN)','New Registration (FN)')}</a></li>
       <li><a href="#" onclick="loadPage('fwRequestsAdmin')"><span class="icon">📥</span>${L('ຄຳຂໍຈາກບໍລິສັດ','Requests from Companies')}</a></li>
+      <li><a href="#" onclick="loadPage('editRequestsAdmin')"><span class="icon">✏️</span>${L('ຄຳຂໍແກ້ໄຂຂໍ້ມູນແຮງງານ','Data Edit Requests')}</a></li>
       <li><div class="sidebar-section">${L('ລົງທະບຽນແຮງງານລາວ','Lao Worker Registration')}</div></li>
       <li><a href="#" onclick="loadPage('laoWorkersAdmin')"><span class="icon">🇱🇦</span>${L('ລາຍງານແຮງງານລາວ','Lao Worker Report')}</a></li>
       <li><div class="sidebar-section">${L('ການເຄື່ອນໄຫວແຮງງານ','Labour Movement')}</div></li>
@@ -880,6 +881,26 @@ async function checkNotifications() {
     });
   }
 
+  // ---- ຄຳຂໍແກ້ໄຂຂໍ້ມູນແຮງງານ ----
+  try {
+    if (currentUser.role === 'admin' || currentUser.role === 'director') {
+      const { count } = await sb.from('worker_edit_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+      if (count > 0) notifications.push({ type: 'warning', msg: `✏️ ມີຄຳຂໍແກ້ໄຂຂໍ້ມູນແຮງງານ ${count} ລາຍການ ລໍຖ້າການອະນຸມັດ`, page: 'editRequestsAdmin' });
+    } else if (currentUser.role === 'company') {
+      const since = new Date(Date.now() - 14*86400000).toISOString();
+      const { data: eds } = await sb.from('worker_edit_requests').select('id,status,worker_name,worker_type,reject_reason').eq('company_id', currentUser.companyId).in('status', ['approved','rejected']).gte('reviewed_at', since);
+      const seenE = new Set(JSON.parse(sessionStorage.getItem('seenDocExpiry') || '[]'));
+      (eds || []).forEach(r => {
+        const key = `edr_${r.id}`;
+        if (seenE.has(key)) return;
+        notifications.push({ type: r.status === 'approved' ? 'success' : 'danger', key,
+          msg: r.status === 'approved' ? `✅ ແອັດມິນອະນຸມັດການແກ້ໄຂຂໍ້ມູນ ${esc(r.worker_name||'')} ແລ້ວ`
+                                      : `❌ ແອັດມິນປະຕິເສດການແກ້ໄຂຂໍ້ມູນ ${esc(r.worker_name||'')}${r.reject_reason ? ' — ' + esc(r.reject_reason) : ''}`,
+          page: r.worker_type === 'foreign' ? 'fwNewWorkers' : 'laoWorkers' });
+      });
+    }
+  } catch(e) { console.warn('edit-request notif failed', e); }
+
   // ---- Company-side: ແຈ້ງເຕືອນເມື່ອແອັດມິນກວດເອກະສານຄຳຮ້ອງ (ໃບໂຄຕ້າ/ໃບອາກອນ/ລາຍຊື່ພະນັກງານ) ຄົບຖ້ວນແລ້ວ ----
   if (currentUser.role === 'company') {
     const { data: reviewedReqs } = await sb.from('fw_requests').select('id,request_type,reviewed_at').eq('company_id', currentUser.companyId).eq('status', 'reviewed');
@@ -1084,6 +1105,7 @@ function loadPage(page, pushState=true) {
     case 'myFwSummary': content.innerHTML = pageMyFwSummary(); loadMyFwSummary(); break;
     case 'laoWorkers': content.innerHTML = pageLaoWorkers(); loadLaoWorkers(); break;
     case 'fwRequestsAdmin': content.innerHTML = pageFwRequestsAdmin(); loadFwRequestsAdmin(); sessionStorage.setItem('seenFwReqAt', Date.now()); setTimeout(checkNotifications, 500); break;
+    case 'editRequestsAdmin': content.innerHTML = pageEditRequestsAdmin(); loadEditRequestsAdmin(); break;
     case 'laoWorkersAdmin': content.innerHTML = pageLaoWorkersAdmin(); loadLaoWorkersAdmin(); break;
     case 'resignationsAdmin': content.innerHTML = pageResignationsAdmin(); loadResignationsAdmin(); break;
     case 'resignationsCompany': content.innerHTML = pageResignationsCompany(); loadResignationsCompany(); break;
@@ -5012,7 +5034,7 @@ async function openFnNewModal(id) {
   if (id) {
     const { data: w, error } = await sb.from('foreign_workers').select('*').eq('id', id).single();
     if (error || !w) { alert('ບໍ່ພົບຂໍ້ມູນ'); return; }
-    document.getElementById('fnNewModalTitle').textContent = 'ແກ້ໄຂຂໍ້ມູນແຮງງານຕ່າງປະເທດ';
+    document.getElementById('fnNewModalTitle').textContent = 'ແກ້ໄຂຂໍ້ມູນແຮງງານຕ່າງປະເທດ' + (currentUser.role === 'company' ? ' (ຕ້ອງລໍຖ້າແອັດມິນອະນຸມັດ)' : '');
     document.getElementById('fnRegIdDisplay').textContent = 'ID ທະບຽນ: ' + w.reg_id;
     document.getElementById('fnCompany').value = w.company_id;
     document.getElementById('fnPrefix').value = w.prefix || 'MR';
@@ -5068,6 +5090,176 @@ async function openFnNewModal(id) {
   }
   document.getElementById('fnNewModal').classList.add('show');
   attachDateFormatDisplays(document.getElementById('fnNewModal'));
+}
+
+// ============================================================
+// ຄຳຂໍແກ້ໄຂຂໍ້ມູນແຮງງານ (ບໍລິສັດຂໍແກ້ -> ແອັດມິນອະນຸມັດ)  — table: worker_edit_requests
+// ============================================================
+const EDIT_FIELD_LABELS = {
+  prefix:'ຄຳນຳໜ້າ', firstname:'ຊື່', lastname:'ນາມສະກຸນ', nationality:'ສັນຊາດ', gender:'ເພດ',
+  position:'ຕຳແໜ່ງ', salary:'ເງິນເດືອນ', dob:'ວັນເກີດ', start_date:'ວັນເລີ່ມວຽກ',
+  quota_no:'ເລກໂກຕາ', quota_date:'ວັນທີໂກຕາ',
+  passport_no:'ເລກ Passport', passport_issue:'Passport ອອກວັນທີ', passport_expiry:'Passport ໝົດອາຍຸ',
+  labour_card_no:'ເລກບັດແຮງງານ', labour_card_issue:'ບັດແຮງງານ ອອກວັນທີ', labour_card_expiry:'ບັດແຮງງານ ໝົດອາຍຸ', labour_card_count:'ຈຳນວນຄັ້ງບັດແຮງງານ',
+  residence_card_no:'ເລກບັດພັກເຊົາ', residence_card_issue:'ບັດພັກເຊົາ ອອກວັນທີ', residence_card_expiry:'ບັດພັກເຊົາ ໝົດອາຍຸ',
+  visa_no:'ເລກ Visa', visa_issue:'Visa ອອກວັນທີ', visa_expiry:'Visa ໝົດອາຍຸ', stay_duration:'ໄລຍະພັກເຊົາ',
+  photo_path:'ຮູບຖ່າຍ', doc_files:'ໄຟລ໌ເອກະສານແນບ',
+  education:'ການສຶກສາ', status:'ສະຖານະ', probation_days:'ມື້ທົດລອງງານ', province:'ແຂວງ', province_code:'ລະຫັດແຂວງ'
+};
+const EDIT_FN_FIELDS  = ['prefix','firstname','lastname','nationality','gender','position','salary','dob','start_date','quota_no','quota_date','passport_no','passport_issue','passport_expiry','labour_card_no','labour_card_issue','labour_card_expiry','labour_card_count','residence_card_no','residence_card_issue','residence_card_expiry','visa_no','visa_issue','visa_expiry','stay_duration','photo_path','doc_files'];
+const EDIT_LAO_FIELDS = ['prefix','firstname','lastname','gender','education','position','status','probation_days','start_date','province','province_code'];
+let _pendingEditKeys = new Set();
+
+async function loadPendingEditKeys() {
+  try {
+    const { data } = await sb.from('worker_edit_requests').select('worker_type,worker_id').eq('company_id', currentUser.companyId).eq('status', 'pending');
+    _pendingEditKeys = new Set((data || []).map(r => `${r.worker_type}:${r.worker_id}`));
+  } catch(e) { _pendingEditKeys = new Set(); }
+}
+
+function _editNorm(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+
+// ສົ່ງຄຳຂໍແກ້ໄຂ (ບໍ່ແກ້ຂໍ້ມູນຈິງ) — ຄືນ true ຖ້າສົ່ງແລ້ວ
+async function submitWorkerEditRequest(workerType, workerId, fields, newPayload, nameForShow) {
+  const table = workerType === 'foreign' ? 'foreign_workers' : 'lao_workers';
+  const { data: oldRow, error: e1 } = await sb.from(table).select('*').eq('id', workerId).single();
+  if (e1 || !oldRow) { alert('ບໍ່ພົບຂໍ້ມູນເດີມ'); return false; }
+  const oldData = {}, newData = {};
+  fields.forEach(f => {
+    if (!(f in newPayload)) return;
+    if (_editNorm(oldRow[f]) !== _editNorm(newPayload[f])) { oldData[f] = oldRow[f] ?? null; newData[f] = newPayload[f] ?? null; }
+  });
+  if (Object.keys(newData).length === 0) { alert('ບໍ່ມີຂໍ້ມູນທີ່ປ່ຽນແປງ'); return false; }
+  const { data: dup } = await sb.from('worker_edit_requests').select('id').eq('worker_type', workerType).eq('worker_id', workerId).eq('status', 'pending').limit(1);
+  if (dup && dup.length) { alert('⏳ ມີຄຳຂໍແກ້ໄຂຂອງຄົນນີ້ທີ່ລໍຖ້າແອັດມິນອະນຸມັດຢູ່ແລ້ວ — ກະລຸນາລໍຖ້າກ່ອນ'); return false; }
+  const reason = (prompt('ກະລຸນາລະບຸເຫດຜົນທີ່ແກ້ໄຂ (ເຊັ່ນ: ພິມຊື່ຜິດ):') || '').trim();
+  if (!reason) { alert('ຕ້ອງລະບຸເຫດຜົນ — ຍັງບໍ່ໄດ້ສົ່ງຄຳຂໍ'); return false; }
+  const { error } = await sb.from('worker_edit_requests').insert({
+    company_id: currentUser.companyId, worker_type: workerType, worker_id: workerId,
+    reg_id: oldRow.reg_id || null, worker_name: nameForShow || `${oldRow.firstname||''} ${oldRow.lastname||''}`.trim(),
+    old_data: oldData, new_data: newData, reason, status: 'pending',
+    requested_by: currentUser.username || null
+  });
+  if (error) { alert('ຜິດພາດ: ' + error.message + '\n(ກວດວ່າໄດ້ສ້າງຕາຕະລາງ worker_edit_requests ໃນ Supabase ແລ້ວ)'); return false; }
+  await logAudit('create', 'worker_edit_requests', workerId, { type: workerType, fields: Object.keys(newData) });
+  alert('📨 ສົ່ງຄຳຂໍແກ້ໄຂໃຫ້ແອັດມິນແລ້ວ\nຂໍ້ມູນຈະປ່ຽນຫຼັງຈາກແອັດມິນອະນຸມັດ');
+  return true;
+}
+
+function _editValShow(f, v) {
+  if (v === null || v === undefined || v === '') return '<span style="color:#aaa;">(ວ່າງ)</span>';
+  if (f === 'doc_files') return Array.isArray(v) ? `${v.length} ໄຟລ໌` : '-';
+  if (f === 'photo_path') return 'ຮູບໃໝ່';
+  if (/_(issue|expiry|date)$|^dob$|^start_date$/.test(f)) return laoDate(String(v));
+  return esc(String(v));
+}
+
+function _editDiffTable(r) {
+  const nd = r.new_data || {}, od = r.old_data || {};
+  const rows = Object.keys(nd).map(f => `<tr>
+    <td style="padding:5px 8px;color:#555;">${esc(EDIT_FIELD_LABELS[f] || f)}</td>
+    <td style="padding:5px 8px;background:#fdecea;">${_editValShow(f, od[f])}</td>
+    <td style="padding:5px 8px;background:#e8f8ef;font-weight:600;">${_editValShow(f, nd[f])}</td></tr>`).join('');
+  return `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;">
+    <tr style="background:#f0f0f0;"><th style="padding:5px 8px;text-align:left;">ຂໍ້ມູນ</th><th style="padding:5px 8px;text-align:left;">ເດີມ</th><th style="padding:5px 8px;text-align:left;">ແກ້ເປັນ</th></tr>${rows}</table>`;
+}
+
+// ---- ຝັ່ງບໍລິສັດ: ເບິ່ງສະຖານະຄຳຂໍແກ້ໄຂຂອງຕົນ ----
+async function showMyEditRequests(workerType) {
+  const { data } = await sb.from('worker_edit_requests').select('*').eq('company_id', currentUser.companyId).eq('worker_type', workerType).order('requested_at', { ascending: false }).limit(50);
+  const badge = st => st === 'approved' ? '<span style="background:#c8e6c9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:11px;">✅ ອະນຸມັດແລ້ວ</span>'
+    : st === 'rejected' ? '<span style="background:#fdecea;color:#c0392b;padding:2px 8px;border-radius:10px;font-size:11px;">❌ ປະຕິເສດ</span>'
+    : '<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:10px;font-size:11px;">⏳ ລໍຖ້າອະນຸມັດ</span>';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.onclick = () => overlay.remove();
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#fff;border-radius:14px;width:min(640px,96vw);max-height:86vh;overflow-y:auto;padding:22px;';
+  panel.onclick = e => e.stopPropagation();
+  panel.innerHTML = `<div style="font-size:16px;font-weight:700;color:#154360;margin-bottom:12px;">📝 ຄຳຂໍແກ້ໄຂຂໍ້ມູນຂອງຂ້ອຍ</div>` +
+    ((data || []).length === 0 ? '<div style="color:#aaa;padding:16px;text-align:center;">ຍັງບໍ່ມີຄຳຂໍແກ້ໄຂ</div>' :
+    data.map(r => `<div style="border:1px solid #e0e0e0;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;"><b>${esc(r.worker_name || '-')} <span style="color:#888;font-weight:400;">${esc(r.reg_id || '')}</span></b>${badge(r.status)}</div>
+      <div style="font-size:11px;color:#888;">${laoDate(r.requested_at)} · ເຫດຜົນ: ${esc(r.reason || '-')}</div>
+      ${_editDiffTable(r)}
+      ${r.status === 'rejected' && r.reject_reason ? `<div style="margin-top:6px;font-size:12px;color:#c0392b;">ເຫດຜົນທີ່ປະຕິເສດ: ${esc(r.reject_reason)}</div>` : ''}
+    </div>`).join('')) +
+    `<div style="text-align:right;"><button class="btn btn-secondary" onclick="this.closest('div[style*=fixed]').remove()">ປິດ</button></div>`;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+}
+
+// ---- ຝັ່ງແອັດມິນ: ໜ້າອະນຸມັດ ----
+function pageEditRequestsAdmin() {
+  return `
+  <div class="card">
+    <div class="card-header" style="background:linear-gradient(135deg,#0f2942,#1a5276);border-radius:12px 12px 0 0;border-bottom:none;">
+      <span class="card-title" style="color:#fff;">✏️ ຄຳຂໍແກ້ໄຂຂໍ້ມູນແຮງງານ ຈາກບໍລິສັດ<br><span style="font-size:11px;color:#cfe0ec;font-weight:400;">Worker data correction requests — ແຮງງານຕ່າງປະເທດເຂົ້າໃໝ່ ແລະ ແຮງງານລາວ</span></span>
+    </div>
+    <div class="card-body"><div id="editReqAdminList"><div style="text-align:center;color:#aaa;padding:20px;">ກຳລັງໂຫຼດ...</div></div></div>
+  </div>`;
+}
+
+async function loadEditRequestsAdmin() {
+  const el = document.getElementById('editReqAdminList');
+  if (!el) return;
+  const { data, error } = await sb.from('worker_edit_requests').select('*').order('requested_at', { ascending: false }).limit(150);
+  if (error) { el.innerHTML = `<div class="alert alert-danger">❌ ${esc(error.message)}<br>ກວດວ່າໄດ້ສ້າງຕາຕະລາງ worker_edit_requests ໃນ Supabase ແລ້ວ</div>`; return; }
+  const ids = [...new Set((data || []).map(r => r.company_id))];
+  let cmap = {};
+  if (ids.length) { const { data: cs } = await sb.from('companies').select('id,username,name_lao').in('id', ids); (cs || []).forEach(c => cmap[c.id] = c); }
+  const canAct = currentUser.role === 'admin';
+  const pending = (data || []).filter(r => r.status === 'pending');
+  const done = (data || []).filter(r => r.status !== 'pending');
+  const card = r => {
+    const c = cmap[r.company_id] || {};
+    const typeTxt = r.worker_type === 'foreign' ? '🌏 ແຮງງານຕ່າງປະເທດ' : '🇱🇦 ແຮງງານລາວ';
+    const st = r.status === 'approved' ? '<span style="color:#2e7d32;">✅ ອະນຸມັດແລ້ວ</span>' : r.status === 'rejected' ? '<span style="color:#c0392b;">❌ ປະຕິເສດ</span>' : '<span style="color:#856404;">⏳ ລໍຖ້າ</span>';
+    return `<div style="border:1px solid #e0e0e0;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <div><b>${esc(r.worker_name || '-')}</b> <span style="color:#888;">${esc(r.reg_id || '')}</span> · ${typeTxt}</div><div>${st}</div></div>
+      <div style="font-size:12px;color:#555;margin-top:2px;">🏢 ${esc(c.username || '')} ${esc(c.name_lao || '')} · ${laoDate(r.requested_at)}</div>
+      <div style="font-size:12px;margin-top:4px;">📝 ເຫດຜົນ: <b>${esc(r.reason || '-')}</b></div>
+      ${_editDiffTable(r)}
+      ${r.status === 'rejected' && r.reject_reason ? `<div style="font-size:12px;color:#c0392b;margin-top:6px;">ເຫດຜົນປະຕິເສດ: ${esc(r.reject_reason)}</div>` : ''}
+      ${r.status === 'pending' && canAct ? `<div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="btn btn-success btn-sm" onclick="approveEditRequest('${r.id}')">✅ ອະນຸມັດ</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectEditRequest('${r.id}')">❌ ປະຕິເສດ</button></div>` : ''}
+    </div>`;
+  };
+  el.innerHTML = `<div class="section-title">⏳ ລໍຖ້າການອະນຸມັດ (${pending.length})</div>` +
+    (pending.length ? pending.map(card).join('') : '<div style="color:#27ae60;padding:10px 0 18px;">✅ ບໍ່ມີຄຳຂໍຄ້າງ</div>') +
+    `<div class="section-title mt-4">ປະຫວັດ</div>` + (done.length ? done.map(card).join('') : '<div style="color:#aaa;">ຍັງບໍ່ມີ</div>');
+}
+
+async function approveEditRequest(id) {
+  if (currentUser.role !== 'admin') { alert('ສະເພາະແອັດມິນ'); return; }
+  const { data: r } = await sb.from('worker_edit_requests').select('*').eq('id', id).single();
+  if (!r || r.status !== 'pending') { alert('ຄຳຂໍນີ້ຖືກດຳເນີນການແລ້ວ'); loadEditRequestsAdmin(); return; }
+  if (!confirm(`ອະນຸມັດການແກ້ໄຂຂໍ້ມູນຂອງ ${r.worker_name || ''} ?\nຂໍ້ມູນຈິງຈະຖືກປ່ຽນທັນທີ`)) return;
+  const table = r.worker_type === 'foreign' ? 'foreign_workers' : 'lao_workers';
+  const payload = { ...(r.new_data || {}) };
+  if (r.worker_type === 'foreign') payload.updated_at = new Date().toISOString();
+  const { error } = await sb.from(table).update(payload).eq('id', r.worker_id);
+  if (error) { alert('ຜິດພາດ: ' + error.message); return; }
+  await sb.from('worker_edit_requests').update({ status: 'approved', reviewed_by: currentUser.username || null, reviewed_at: new Date().toISOString() }).eq('id', id).eq('status', 'pending');
+  await logAudit('update', table, r.worker_id, { via: 'edit_request', request_id: id, fields: Object.keys(r.new_data || {}) });
+  if (r.worker_type === 'foreign') { try { await syncForeignWorkersToRecords(r.company_id); } catch(e) { console.warn(e); } }
+  loadEditRequestsAdmin();
+  setTimeout(checkNotifications, 300);
+}
+
+async function rejectEditRequest(id) {
+  if (currentUser.role !== 'admin') { alert('ສະເພາະແອັດມິນ'); return; }
+  const reason = (prompt('ເຫດຜົນທີ່ປະຕິເສດ (ບໍລິສັດຈະເຫັນ):') || '').trim();
+  if (!reason) return;
+  await sb.from('worker_edit_requests').update({ status: 'rejected', reject_reason: reason, reviewed_by: currentUser.username || null, reviewed_at: new Date().toISOString() }).eq('id', id).eq('status', 'pending');
+  loadEditRequestsAdmin();
+  setTimeout(checkNotifications, 300);
 }
 
 async function saveFnWorker() {
@@ -5141,6 +5333,16 @@ async function saveFnWorker() {
     }
   }
   payload.doc_files = docFiles;
+
+  // ບໍລິສັດແກ້ໄຂ -> ສົ່ງເປັນຄຳຂໍໃຫ້ແອັດມິນອະນຸມັດກ່ອນ (ບໍ່ແກ້ຂໍ້ມູນຈິງ)
+  if (id && currentUser.role === 'company') {
+    const sent = await submitWorkerEditRequest('foreign', id, EDIT_FN_FIELDS, payload, `${firstname} ${lastname}`);
+    if (sent) {
+      closeModal('fnNewModal');
+      if (document.getElementById('companyFnTable')) { await loadFwNewWorkers(); } else { loadFnNew(); }
+    }
+    return;
+  }
 
   let error, insertedRegId = regId;
   if (id) { ({ error } = await sb.from('foreign_workers').update(payload).eq('id', id)); if (!error) await logAudit('update', 'foreign_workers', id, { regId }); }
@@ -5567,6 +5769,7 @@ function pageFwNewWorkers() {
       <span class="card-title" style="color:#fff;">🆕 ແຮງງານຕ່າງປະເທດເຂົ້າໃໝ່<br><span style="font-size:11px;color:#cfe0ec;font-weight:400;">New Foreign Worker Registration (FN)</span></span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-success btn-sm" onclick="openFnNewModal()">+ ລົງທະບຽນໃໝ່</button>
+        <button class="btn btn-secondary btn-sm" onclick="showMyEditRequests('foreign')">📝 ຄຳຂໍແກ້ໄຂຂອງຂ້ອຍ</button>
         <button class="btn btn-warning btn-sm" onclick="openFwLetterPanel('new')">📋 ສ້າງໃບສະເໜີ</button>
       </div>
     </div>
@@ -5641,6 +5844,7 @@ async function loadFwNewWorkers() {
     return;
   }
 
+  await loadPendingEditKeys();
   renderFwNewWorkersTable(fnWorkers, fnrBanner);
   // cache for letter panel
   const { data: all } = await sb.from('foreign_workers').select('*').eq('company_id', currentUser.companyId).order('firstname');
@@ -5688,7 +5892,9 @@ function renderFwNewWorkersTable(fnWorkers, fnrBanner) {
         <td><span class="${laborStatus.class}">${laborStatus.text}</span></td>
         <td><span class="${passportStatus.class}">${passportStatus.text}</span></td>
         <td style="white-space:nowrap;">
-          <button class="btn btn-info btn-sm" onclick="openFnNewModal('${w.id}')">✏️</button>
+          ${_pendingEditKeys.has('foreign:' + w.id)
+            ? `<span title="ລໍຖ້າແອັດມິນອະນຸມັດການແກ້ໄຂ" style="background:#fff3cd;color:#856404;padding:3px 8px;border-radius:10px;font-size:11px;">⏳ ລໍຖ້າອະນຸມັດ</span>`
+            : `<button class="btn btn-info btn-sm" onclick="openFnNewModal('${w.id}')" title="ຂໍແກ້ໄຂ (ຕ້ອງໃຫ້ແອັດມິນອະນຸມັດ)">✏️</button>`}
           ${renewBtn}
         </td>
       </tr>`;
@@ -7090,6 +7296,7 @@ function pageLaoWorkers() {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-secondary btn-sm" onclick="printSection('laoWorkerTable','ລົງທະບຽນແຮງງານລາວ')">🖨️ ພິມ</button>
         <button class="btn btn-success btn-sm" onclick="openLaoWorkerModal()">➕ ລົງທະບຽນໃໝ່</button>
+        <button class="btn btn-secondary btn-sm" onclick="showMyEditRequests('lao')">📝 ຄຳຂໍແກ້ໄຂຂອງຂ້ອຍ</button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
           📂 Excel Upload<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleLaoWorkerExcel(this.files[0])">
         </label>
@@ -7304,6 +7511,7 @@ async function loadLaoWorkers() {
       w.status = 'ຖາວອນ'; w.start_date = newDate;
     } catch(e) { /* skip bad dates silently */ }
   }
+  await loadPendingEditKeys();
   renderLaoRegDateSummary(_laoWorkersCache, 'lwRegDateSummary');
   renderLaoWorkerTable(_laoWorkersCache);
 }
@@ -7387,6 +7595,7 @@ function renderLaoWorkerTable(workers) {
       <th style="padding:8px;">ເຂົ້າເຮັດວຽກ</th>
       <th style="padding:8px;">ໄລຍະ</th>
       <th style="padding:8px;">ແຂວງ</th>
+      <th style="padding:8px;">ຈັດການ</th>
     </tr></thead>
     <tbody>${workers.map((w,i)=>`
       <tr style="background:${i%2?'#f8f8f8':'#fff'}">
@@ -7400,6 +7609,11 @@ function renderLaoWorkerTable(workers) {
         <td style="padding:7px;text-align:center;">${laoDate(w.start_date)}</td>
         <td style="padding:7px;text-align:center;">${calcDuration(w.start_date)}</td>
         <td style="padding:7px;">${esc((w.province||'-').replace('ແຂວງ','').replace('ນະຄອນຫຼວງ','ນ.ຫ.'))}</td>
+        <td style="padding:7px;text-align:center;white-space:nowrap;" class="no-print">
+          ${_pendingEditKeys.has('lao:' + w.id)
+            ? `<span title="ລໍຖ້າແອັດມິນອະນຸມັດການແກ້ໄຂ" style="background:#fff3cd;color:#856404;padding:3px 8px;border-radius:10px;font-size:11px;">⏳ ລໍຖ້າອະນຸມັດ</span>`
+            : `<button class="btn btn-info btn-sm" onclick="openLaoWorkerModal('${w.id}')" title="ຂໍແກ້ໄຂ (ຕ້ອງໃຫ້ແອັດມິນອະນຸມັດ)">✏️</button>`}
+        </td>
       </tr>`).join('')}
     </tbody>
   </table>`;
@@ -7460,6 +7674,7 @@ function openLaoWorkerModal(id) {
   document.getElementById('lwStatus').value = 'ຖາວອນ';
   document.getElementById('lwProbationGroup').style.display = 'none';
   document.getElementById('lwPermanentInfo').style.display  = 'none';
+  const _lwT = document.getElementById('laoWorkerModalTitle'); if (_lwT) _lwT.textContent = 'ລົງທະບຽນແຮງງານລາວ';
 
   // Always set reg_date = today automatically
   const todayISO = new Date().toISOString().split('T')[0];
@@ -7489,7 +7704,7 @@ function openLaoWorkerModal(id) {
     lwUpdateDuration();
     const provEl = document.getElementById('lwProvince');
     if (provEl) provEl.value = w.province||'';
-    document.getElementById('lwModalTitle') && (document.getElementById('lwModalTitle').textContent='ແກ້ໄຂຂໍ້ມູນ');
+    if (_lwT) _lwT.textContent = 'ແກ້ໄຂຂໍ້ມູນແຮງງານລາວ (ຕ້ອງລໍຖ້າແອັດມິນອະນຸມັດ)';
   }
   m.style.display = 'block';
 }
@@ -7538,6 +7753,11 @@ async function saveLaoWorker() {
       province_code:  (LAO_PROVINCES.find(p=>p.name===document.getElementById('lwProvince').value)||{}).code||null,
       reg_date:       safeDate(regDateRaw) || new Date().toISOString().split('T')[0],
     };
+    if (id && currentUser.role === 'company') {
+      const sent = await submitWorkerEditRequest('lao', id, EDIT_LAO_FIELDS, payload, `${firstname} ${lastname}`);
+      if (sent) { document.getElementById('laoWorkerModal').style.display = 'none'; loadLaoWorkers(); }
+      return;
+    }
     if (id) {
       const { error } = await sb.from('lao_workers').update(payload).eq('id', id);
       if (error) throw error;
