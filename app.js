@@ -5093,6 +5093,56 @@ async function openFnNewModal(id) {
 }
 
 // ============================================================
+// ກັນຂໍ້ມູນຊ້ຳ (ຊື່ + ນາມສະກຸນ + ວັນເລີ່ມວຽກ ຄືກັນ) — ໃຊ້ກັບ Excel ແລະ ການລົງທະບຽນລາຍບຸກຄົນ
+// ============================================================
+function _dupNorm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function _dupKey(f, l, d) { return `${_dupNorm(f)}|${_dupNorm(l)}|${d || ''}`; }
+function skipTxt(n) { return n ? `\n⏭️ ຂ້າມ ${n} ຄົນ ທີ່ຊ້ຳກັບຂໍ້ມູນເດີມ` : ''; }
+
+async function fetchExistingWorkerKeys(table, companyId) {
+  const { data } = await supabaseRetry(() => sb.from(table).select('firstname,lastname,start_date').eq('company_id', companyId));
+  const exact = new Set(), names = new Set();
+  (data || []).forEach(w => { exact.add(_dupKey(w.firstname, w.lastname, w.start_date)); names.add(_dupKey(w.firstname, w.lastname, '')); });
+  return { exact, names };
+}
+
+// items: ແຖວຈາກ Excel; getParts(item) -> [ຊື່, ນາມສະກຸນ, ວັນເລີ່ມວຽກ(YYYY-MM-DD)]
+// ຄືນ { fresh, skipped, stop } — stop=true ຖ້າຜູ້ໃຊ້ຍົກເລີກ ຫຼື ຊ້ຳໝົດ
+async function dedupeBulkRows(items, getParts, existing) {
+  const seen = new Set(), fresh = [], skipped = [];
+  items.forEach(it => {
+    const [f, l, d] = getParts(it);
+    const k = _dupKey(f, l, d);
+    if (existing.exact.has(k)) skipped.push(`${f||''} ${l||''} — ມີໃນລະບົບແລ້ວ`);
+    else if (seen.has(k)) skipped.push(`${f||''} ${l||''} — ຊ້ຳກັນໃນໄຟລ໌`);
+    else { seen.add(k); fresh.push(it); }
+  });
+  if (!skipped.length) return { fresh, skipped, stop: false };
+  const list = skipped.slice(0, 15).map(x => '• ' + x).join('\n') + (skipped.length > 15 ? `\n... ແລະ ອີກ ${skipped.length - 15} ຄົນ` : '');
+  if (!fresh.length) {
+    alert(`⚠️ ພົບຂໍ້ມູນຊ້ຳທັງໝົດ ${skipped.length} ຄົນ (ຊື່ + ນາມສະກຸນ + ວັນເລີ່ມວຽກຄືກັນ)\n\n${list}\n\nບໍ່ມີຂໍ້ມູນໃໝ່ທີ່ຈະນຳເຂົ້າ — ອາດອັບໂຫຼດໄຟລ໌ນີ້ໄປແລ້ວ`);
+    return { fresh, skipped, stop: true };
+  }
+  const ok = confirm(`⚠️ ພົບຂໍ້ມູນຊ້ຳ ${skipped.length} ຄົນ (ຊື່ + ນາມສະກຸນ + ວັນເລີ່ມວຽກຄືກັນ) — ຈະຖືກຂ້າມ:\n\n${list}\n\nຈະນຳເຂົ້າສະເພາະ ${fresh.length} ຄົນທີ່ເຫຼືອ. ດຳເນີນຕໍ່?`);
+  return { fresh, skipped, stop: !ok };
+}
+
+// ການລົງທະບຽນລາຍບຸກຄົນ: ຄືນ true ຖ້າຄວນບັນທຶກຕໍ່, false ຖ້າຄວນຢຸດ
+async function checkSingleDuplicate(table, companyId, first, last, startDate) {
+  try {
+    const ex = await fetchExistingWorkerKeys(table, companyId);
+    if (ex.exact.has(_dupKey(first, last, startDate || ''))) {
+      alert(`⚠️ ຂໍ້ມູນຊ້ຳ!\n\n"${first} ${last}" ທີ່ວັນເລີ່ມວຽກຄືກັນ ມີໃນລະບົບຂອງບໍລິສັດແລ້ວ\nບໍ່ສາມາດລົງທະບຽນຊ້ຳໄດ້ — ກະລຸນາກວດລາຍຊື່ກ່ອນ`);
+      return false;
+    }
+    if (ex.names.has(_dupKey(first, last, ''))) {
+      return confirm(`⚠️ ມີຊື່ "${first} ${last}" ໃນລະບົບຂອງບໍລິສັດແລ້ວ (ແຕ່ວັນເລີ່ມວຽກຕ່າງກັນ)\n\nຖ້າເປັນຄົນດຽວກັນ ໃຫ້ກົດ Cancel ແລ້ວກວດລາຍຊື່.\nຖ້າເປັນຄົນຄົນລະຄົນ ກົດ OK ເພື່ອບັນທຶກຕໍ່`);
+    }
+  } catch(e) { console.warn('dup check failed', e); }
+  return true;
+}
+
+// ============================================================
 // ຄຳຂໍແກ້ໄຂຂໍ້ມູນແຮງງານ (ບໍລິສັດຂໍແກ້ -> ແອັດມິນອະນຸມັດ)  — table: worker_edit_requests
 // ============================================================
 const EDIT_FIELD_LABELS = {
@@ -5325,6 +5375,9 @@ async function saveFnWorker() {
     stay_duration: parseInt(document.getElementById('fnStayDuration').value) || null,
     updated_at: new Date().toISOString()
   };
+
+  // ກັນຂໍ້ມູນຊ້ຳ (ລົງທະບຽນໃໝ່ເທົ່ານັ້ນ)
+  if (!id && !(await checkSingleDuplicate('foreign_workers', companyId, firstname, lastname, payload.start_date))) return;
 
   const photoFile = document.getElementById('fnPhotoFile').files[0];
   if (photoFile) {
@@ -6292,8 +6345,12 @@ async function handleFnNewBulkExcel(file) {
     }
     if (rows.length < 2) { alert('ໄຟລ໌ຫວ່າງ ຫຼື ໃສ່ຂໍ້ມູນ row ທີ 2 ເປັນຕົ້ນໄປ'); return; }
 
-    const dataRows = rows.slice(1).filter(r => r[1] || r[2]);
+    let dataRows = rows.slice(1).filter(r => r[1] || r[2]);
     if (!dataRows.length) { alert('ບໍ່ພົບຂໍ້ມູນ — ໃສ່ຂໍ້ມູນຕັ້ງແຕ່ row 2'); return; }
+    // ກັນຂໍ້ມູນຊ້ຳ: ຂ້າມແຖວທີ່ມີຢູ່ແລ້ວ (ຊື່ + ນາມສະກຸນ + ວັນເລີ່ມວຽກ)
+    const _dd = await dedupeBulkRows(dataRows, r => [r[1], r[2], excelDate(r[21])], await fetchExistingWorkerKeys('foreign_workers', currentUser.companyId));
+    if (_dd.stop) return;
+    dataRows = _dd.fresh; const skipN = _dd.skipped.length;
 
     if (!confirm(`ກຽມລົງທະບຽນ ${dataRows.length} ຄົນ\n\nຢືນຢັນ?`)) return;
 
@@ -6348,9 +6405,9 @@ async function handleFnNewBulkExcel(file) {
 
     const { error: syncErr } = await syncForeignWorkersToRecords(currentUser.companyId) || {};
     if (syncErr) {
-      alert(`✅ ລົງທະບຽນ ${inserts.length} ຄົນ ສຳເລັດ — ແຕ່ Sync ສະຖິຕິ ຕປທ ມີບັນຫາ: ${syncErr.message}`);
+      alert(`✅ ລົງທະບຽນ ${inserts.length} ຄົນ ສຳເລັດ${skipTxt(skipN)} — ແຕ່ Sync ສະຖິຕິ ຕປທ ມີບັນຫາ: ${syncErr.message}`);
     } else {
-      alert(`✅ ລົງທະບຽນ ${inserts.length} ຄົນ ສຳເລັດ — ຂໍ້ມູນຖືກ Sync ໄປໃນ "ສະຫຼຸບ" ທັນທີ`);
+      alert(`✅ ລົງທະບຽນ ${inserts.length} ຄົນ ສຳເລັດ${skipTxt(skipN)} — ຂໍ້ມູນຖືກ Sync ໄປໃນ "ສະຫຼຸບ" ທັນທີ`);
     }
     if (document.getElementById('companyFnTable')) {
       await loadFwNewWorkers();
@@ -6453,8 +6510,12 @@ async function handleFnBulkExcel(file) {
     if (rows.length < 2) { alert('ໄຟລ໌ຫວ່າງ ຫຼື ໃສ່ຂໍ້ມູນ row ທີ 2 ເປັນຕົ້ນໄປ'); return; }
 
     // Validate at least 3 columns (prefix, firstname, lastname)
-    const dataRows = rows.slice(1).filter(r => r[1] || r[2]);
+    let dataRows = rows.slice(1).filter(r => r[1] || r[2]);
     if (!dataRows.length) { alert('ບໍ່ພົບຂໍ້ມູນ — ໃສ່ຂໍ້ມູນຕັ້ງແຕ່ row 2'); return; }
+    // ກັນຂໍ້ມູນຊ້ຳ: ຂ້າມແຖວທີ່ມີຢູ່ແລ້ວ (ຊື່ + ນາມສະກຸນ + ວັນເລີ່ມວຽກ)
+    const _dd = await dedupeBulkRows(dataRows, r => [r[1], r[2], excelDate(r[21])], await fetchExistingWorkerKeys('foreign_workers', currentUser.companyId));
+    if (_dd.stop) return;
+    dataRows = _dd.fresh; const skipN = _dd.skipped.length;
 
     if (!confirm(`ກຽມນຳເຂົ້າ ${dataRows.length} ຄົນ\n\n⚠️ ຫຼັງຈາກນຳເຂົ້າ ຈະບໍ່ສາມາດແກ້ໄຂໄດ້ — ຕ້ອງຕິດຕໍ່ແອັດມີນ\n\nຢືນຢັນ?`)) return;
 
@@ -6498,9 +6559,9 @@ async function handleFnBulkExcel(file) {
     // Sync summary totals (ຄືກັບການບັນທຶກເທື່ອລະຄົນ) — ບໍ່ດັ່ງນັ້ນ "ສະຫຼຸບແຮງງານທັງໝົດ" ຈະຄ້າງເລກ 0
     const { error: syncErr } = await syncForeignWorkersToRecords(currentUser.companyId) || {};
     if (syncErr) {
-      alert(`✅ ນຳເຂົ້າ ${inserts.length} ຄົນ ສຳເລັດ — ແຕ່ Sync ສະຖິຕິ ຕປທ ມີບັນຫາ: ${syncErr.message}`);
+      alert(`✅ ນຳເຂົ້າ ${inserts.length} ຄົນ ສຳເລັດ${skipTxt(skipN)} — ແຕ່ Sync ສະຖິຕິ ຕປທ ມີບັນຫາ: ${syncErr.message}`);
     } else {
-      alert(`✅ ນຳເຂົ້າ ${inserts.length} ຄົນ ສຳເລັດ — ຂໍ້ມູນໄດ້ຖືກລ໋ອກແລ້ວ ແລະ Sync ໄປໃນ "ສະຫຼຸບ" ທັນທີ`);
+      alert(`✅ ນຳເຂົ້າ ${inserts.length} ຄົນ ສຳເລັດ${skipTxt(skipN)} — ຂໍ້ມູນໄດ້ຖືກລ໋ອກແລ້ວ ແລະ Sync ໄປໃນ "ສະຫຼຸບ" ທັນທີ`);
     }
     await renderFnBulkSection();
     await loadFwRenewDocsData();
@@ -7765,6 +7826,7 @@ async function saveLaoWorker() {
       province_code:  (LAO_PROVINCES.find(p=>p.name===document.getElementById('lwProvince').value)||{}).code||null,
       reg_date:       safeDate(regDateRaw) || new Date().toISOString().split('T')[0],
     };
+    if (!id && !(await checkSingleDuplicate('lao_workers', currentUser.companyId, firstname, lastname, payload.start_date))) return;
     if (id && currentUser.role === 'company') {
       const sent = await submitWorkerEditRequest('lao', id, EDIT_LAO_FIELDS, payload, `${firstname} ${lastname}`);
       if (sent) { document.getElementById('laoWorkerModal').style.display = 'none'; loadLaoWorkers(); }
@@ -7845,8 +7907,13 @@ async function handleLaoWorkerExcel(file) {
     const companyCode = await getCompanyCode(currentUser.companyId);
     const inserts = [];
     const unknownProvinces = [];
-    for (let i=1;i<rows.length;i++) {
-      const r = rows[i]; if (!r[1]||!r[2]) continue;
+    // ກັນຂໍ້ມູນຊ້ຳ: ຂ້າມແຖວທີ່ມີຢູ່ແລ້ວ (ຊື່ + ນາມສະກຸນ + ວັນເລີ່ມວຽກ)
+    const _cand = [];
+    for (let i=1;i<rows.length;i++) { if (rows[i][1] && rows[i][2]) _cand.push({ r: rows[i], i }); }
+    const _dd = await dedupeBulkRows(_cand, c => [c.r[1], c.r[2], excelSafeDate(c.r[8])], await fetchExistingWorkerKeys('lao_workers', currentUser.companyId));
+    if (_dd.stop) return;
+    const skipN = _dd.skipped.length;
+    for (const { r, i } of _dd.fresh) {
       const pName = (r[9]||'').trim();
       let prov = LAO_PROVINCES.find(p=>p.name===pName);
       if (!prov && pName) {
@@ -7876,7 +7943,7 @@ async function handleLaoWorkerExcel(file) {
       count: inserts.length,
     });
 
-    let msg = `✅ ນຳເຂົ້າ ${inserts.length} ຄົນ ສຳເລັດ`;
+    let msg = `✅ ນຳເຂົ້າ ${inserts.length} ຄົນ ສຳເລັດ${skipTxt(skipN)}`;
     if (unknownProvinces.length) {
       msg += `\n\n⚠️ ບໍ່ຮູ້ຈັກຊື່ແຂວງ ${unknownProvinces.length} ແຖວ (ID ຈະໃຊ້ລະຫັດ 00 ແທນ):\n` + unknownProvinces.slice(0,10).join('\n') + (unknownProvinces.length>10 ? `\n... ແລະອີກ ${unknownProvinces.length-10} ແຖວ` : '') + `\n\nກະລຸນາກວດການສະກົດຊື່ແຂວງໃນ Excel (ຕ້ອງກົງກັບຊື່ທາງການ ເຊັ່ນ "ແຂວງສະຫວັນນະເຂດ")`;
     }
